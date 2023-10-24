@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  emqx:
+    image: emqx:5.3.0
+    container_name: emqx
+    environment:
+      - "EMQX_NODE_NAME=emqx@node1.emqx.io"
+      - "EMQX_CLUSTER__DISCOVERY_STRATEGY=static"
+      - "EMQX_CLUSTER__STATIC__SEEDS=[emqx@node1.emqx.io]"
+    healthcheck:
+      test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
+      interval: 5s
+      timeout: 25s
+      retries: 5
+    networks:
+      data-numbers-network:
+        aliases:
+          - node1.emqx.io
+    ports:
+      - 1883:1883
+      - 8083:8083
+      - 8084:8084
+      - 8883:8883
+      - 18083:18083 
+    volumes:
+      - ./data/emqx1_data:/opt/emqx/data
+
+  dashboard:
+    image: apachepulsar/pulsar-manager:latest
+    ports:
+      - "9527:9527"
+      - "7750:7750"
+    container_name: dashboard
+    depends_on:
+      - pulsar
+    environment:
+      SPRING_CONFIGURATION_FILE: /pulsar-manager/pulsar-manager/application.properties
+    networks:
+      - data-numbers-network
+
+  db:
+    container_name: data-numbers-db
+    image: postgres:15
+    restart: always
+    ports:
+      - 5433:5432 
+    volumes:
+      - ./data/postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=numbers
+      - POSTGRES_PASSWORD=numbers
+      - POSTGRES_DB=data-numbers-db
+    networks:
+      - data-numbers-network
+
+  pulsar:
+    image: apachepulsar/pulsar:latest
+    command: bin/pulsar standalone
+    hostname: pulsar
+    container_name: pulsar
+    ports:
+      - "8080:8080"
+      - "6650:6650"
+    restart: always
+    volumes:
+      - "./data:/pulsar/data"
+    networks:
+      - data-numbers-network
+
+  redis:
+    container_name: 'redis'
+    image: redis
+    restart: always
+    ports:
+      - '6380:6379'
+    environment:
+      TZ: 'America/Sao_Paulo'
+    networks:
+      - data-numbers-network
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: numbers
+      POSTGRES_PASSWORD: numbers
+    volumes:
+      - timescaledb-volume:/var/lib/postgresql/data
+    networks:
+      - data-numbers-network
+
+volumes:
+  timescaledb-volume:
+
+networks:
+  data-numbers-network:
+    driver: bridge
