@@ -1,6 +1,10 @@
 package config
 
-import "github.com/redis/go-redis/v9"
+import (
+	"os"
+
+	"github.com/redis/go-redis/v9"
+)
 
 type Redis struct {
 	Host     string
@@ -9,12 +13,12 @@ type Redis struct {
 	Db       int
 }
 
-func NewRedis(host string, port string, password string, db int) *Redis {
+func NewRedis() *Redis {
 	return &Redis{
-		Host:     host,
-		Port:     port,
-		Password: password,
-		Db:       db,
+		Host:     os.Getenv("HOST_REDIS"),
+		Port:     os.Getenv("PORT_REDIS"),
+		Password: os.Getenv("PASSWORD_REDIS"),
+		Db:       0,
 	}
 }
 
