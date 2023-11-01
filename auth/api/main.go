@@ -1,6 +1,7 @@
 package main
 
 import (
+	tokenVerifyRoute "github.com/data_numbers/api/routes/token/verify"
 	userCreateRoute "github.com/data_numbers/api/routes/user/create"
 	userLoginRoute "github.com/data_numbers/api/routes/user/login"
 	userUpdateRoute "github.com/data_numbers/api/routes/user/update"
@@ -31,6 +32,7 @@ func main() {
 	userCreateRoute.InitCreateUserRouter(dbConnect, api)
 	userLoginRoute.InitLoginRoutes(dbConnect, api)
 	userUpdateRoute.InitUpdateRoutes(dbConnect, api)
+	tokenVerifyRoute.InitVerifyTokenRoutes(dbConnect, api)
 
 	router.Run(":3000")
 }

@@ -7,6 +7,7 @@ import (
 
 type IRepository interface {
 	CreateUser(input UserCreateInput) (*models.User, error)
+	GetUser(id string) (*models.User, error)
 }
 
 type Repository struct {
@@ -27,6 +28,16 @@ func (repo *Repository) CreateUser(input UserCreateInput) (*models.User, error) 
 	}
 
 	if err := repo.db.Create(&user).Error; err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (repo *Repository) GetUser(id string) (*models.User, error) {
+	var user models.User
+
+	if err := repo.db.Where("id = ?", id).First(&user).Error; err != nil {
 		return nil, err
 	}
 
