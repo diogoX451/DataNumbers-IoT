@@ -1,6 +1,22 @@
 version: '3.8'
 
 services:
+
+  auth-api:
+    container_name: auth-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 3000:3000
+    networks:
+      - data-numbers-network
+    environment:
+      - DB_DNS=host=db user=numbers password=numbers dbname=data-numbers-db port=5432 sslmode=disable TimeZone=America/Sao_Paulo
+      - HOST_REDIS=redis
+      - PORT_REDIS=6379
+      - PASSWORD_REDIS=""
+
   emqx:
     image: emqx:5.3.0
     container_name: emqx
@@ -9,7 +25,7 @@ services:
       - "EMQX_CLUSTER__DISCOVERY_STRATEGY=static"
       - "EMQX_CLUSTER__STATIC__SEEDS=[emqx@node1.emqx.io]"
     healthcheck:
-      test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
+      test: [ "CMD", "/opt/emqx/bin/emqx", "ctl", "status" ]
       interval: 5s
       timeout: 25s
       retries: 5
@@ -22,7 +38,7 @@ services:
       - 8083:8083
       - 8084:8084
       - 8883:8883
-      - 18083:18083 
+      - 18083:18083
     volumes:
       - ./data/emqx1_data:/opt/emqx/data
 
@@ -44,7 +60,7 @@ services:
     image: postgres:15
     restart: always
     ports:
-      - 5433:5432 
+      - 5433:5432
     volumes:
       - ./data/postgres-data:/var/lib/postgresql/data
     environment:
@@ -94,6 +110,7 @@ services:
 
 volumes:
   timescaledb-volume:
+
 
 networks:
   data-numbers-network:
