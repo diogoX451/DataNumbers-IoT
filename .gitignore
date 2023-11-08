@@ -2,4 +2,6 @@ data/*
 auth/private_key.pem
 auth/public_key.pem
 auth/.env
+datanumbers-iot-web/.next/
+datanumbers-iot-web/node_modules/
 ```
