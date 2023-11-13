@@ -2,18 +2,22 @@ package grpc
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
+	"github.com/gateway-emqx-datanumbers/internal/service/database"
 	"github.com/gateway-emqx-datanumbers/internal/service/grpc/emqx.io/grpc/exhook"
 	"github.com/gateway-emqx-datanumbers/util"
 )
 
 type Server struct {
 	exhook.UnimplementedHookProviderServer
+	db *database.Database
 }
 
 var cnter *util.Counter = util.NewCounter(0, 100)
 
-func (s *Server) NewServerHook() *Server {
+func (s *Server) NewServerHook(db *database.Database) *Server {
 	return &Server{}
 }
 
@@ -130,10 +134,40 @@ func (s *Server) OnSessionTerminated(ctx context.Context, in *exhook.SessionTerm
 
 func (s *Server) OnMessagePublish(ctx context.Context, in *exhook.MessagePublishRequest) (*exhook.ValuedResponse, error) {
 	cnter.Count(1)
-	in.Message.Payload = []byte("hardcode payload by exhook-svr-go :)")
 	reply := &exhook.ValuedResponse{}
+	var data Data
+	if err := json.Unmarshal(in.Message.Payload, &data); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal payload: %v", err)
+	}
+
+	if data.Type == "" && data.Content == nil {
+		reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
+		reply.Value = &exhook.ValuedResponse_Message{Message: in.Message}
+		return reply, nil
+	}
+
+	switch data.Type {
+	case TEMPERATURE_SENSOR:
+		temp := data.Content.(TemperatureData)
+		if temp.Value > 30 {
+			in.Message.Headers["allow_publish"] = "false"
+			in.Message.Payload = []byte("")
+		}
+
+		temp.Value = temp.Value + 1
+
+	case HUMIDITY_SENSOR:
+		hum := data.Content.(HumidityData)
+		if hum.Value > 80 {
+			in.Message.Headers["allow_publish"] = "false"
+			in.Message.Payload = []byte("")
+		}
+
+	}
+
 	reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
 	reply.Value = &exhook.ValuedResponse_Message{Message: in.Message}
+
 	return reply, nil
 }
 

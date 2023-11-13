@@ -7,14 +7,29 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	emqxConfig "github.com/gateway-emqx-datanumbers/internal/config/emqx"
 	emqxService "github.com/gateway-emqx-datanumbers/internal/service"
+	"github.com/gateway-emqx-datanumbers/internal/service/database"
 	serverGrpc "github.com/gateway-emqx-datanumbers/internal/service/grpc"
 	gateway_emqx "github.com/gateway-emqx-datanumbers/internal/service/grpc/emqx.io/grpc/exhook"
 	"google.golang.org/grpc"
 )
 
+var db *database.Postgres
+
+func init() {
+	db = database.NewPostgres()
+	db.Connect()
+}
+
 func main() {
 	emqx := emqxConfig.NewEmqx("client-1")
 	client := emqx.Connect()
+	test := client.Subscribe(
+		"esp32/temperatura",
+		0,
+		func(c mqtt.Client, m mqtt.Message) {
+			emqxService.MessageHandler(c, m)
+		},
+	)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", 5051))
 
@@ -35,14 +50,6 @@ func main() {
 		0,
 		false,
 		"Hello World",
-	)
-
-	test := client.Subscribe(
-		"esp32/temperatura",
-		0,
-		func(c mqtt.Client, m mqtt.Message) {
-			emqxService.MessageHandler(c, m)
-		},
 	)
 
 	fmt.Println(test.Done())

@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option go_package = "emqx.io/grpc/exhook";
 
-package hook_emqx;
+package emqx.exhook.v2;
 
 service HookProvider {
 
