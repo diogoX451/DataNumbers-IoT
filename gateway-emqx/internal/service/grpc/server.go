@@ -75,19 +75,13 @@ func (s *Server) OnClientDisconnected(ctx context.Context, in *exhook.ClientDisc
 
 func (s *Server) OnClientAuthenticate(ctx context.Context, in *exhook.ClientAuthenticateRequest) (*exhook.ValuedResponse, error) {
 	cnter.Count(1)
-	reply := &exhook.ValuedResponse{
-		Type: exhook.ValuedResponse_CONTINUE,
-	}
-
-	_, err := s.db.Query("SELECT * FROM auth.users WHERE username = $1", in.Clientinfo.Username)
-
-	if err != nil {
-		reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
-		reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: false}
-		return reply, nil
-	}
-
+	reply := &exhook.ValuedResponse{}
+	fmt.Println("OnClientAuthenticate")
+	fmt.Println(in)
+	reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
+	reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: false}
 	return reply, nil
+
 }
 
 func (s *Server) OnClientAuthorize(ctx context.Context, in *exhook.ClientAuthorizeRequest) (*exhook.ValuedResponse, error) {
@@ -143,18 +137,13 @@ func (s *Server) OnSessionTerminated(ctx context.Context, in *exhook.SessionTerm
 }
 func (s *Server) OnMessagePublish(ctx context.Context, in *exhook.MessagePublishRequest) (*exhook.ValuedResponse, error) {
 	cnter.Count(1)
-	reply := &exhook.ValuedResponse{
-		Type: exhook.ValuedResponse_CONTINUE,
-	}
-
-	_, err := s.db.Query("SELECT * FROM mqtt_acl WHERE topic = $1", in.Message.Topic)
-	if err != nil {
-		reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
-		reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: false}
-		return reply, nil
-	}
-
+	reply := &exhook.ValuedResponse{}
+	fmt.Println("OnMessagePublish")
+	fmt.Println(in.Message)
+	reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
+	reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: false}
 	return reply, nil
+
 }
 
 //case2: stop publish the `t/d` messages
