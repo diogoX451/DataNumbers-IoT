@@ -18,8 +18,7 @@ service HookProvider {
 
   rpc OnClientDisconnected(ClientDisconnectedRequest) returns (EmptySuccess) {};
 
-  rpc OnClientAuthenticate(ClientAuthenticateRequest) returns (ValuedResponse) {
-  };
+  rpc OnClientAuthenticate(ClientAuthenticateRequest) returns (ValuedResponse) {};
 
   rpc OnClientAuthorize(ClientAuthorizeRequest) returns (ValuedResponse) {};
 
@@ -31,8 +30,7 @@ service HookProvider {
 
   rpc OnSessionSubscribed(SessionSubscribedRequest) returns (EmptySuccess) {};
 
-  rpc OnSessionUnsubscribed(SessionUnsubscribedRequest) returns (EmptySuccess) {
-  };
+  rpc OnSessionUnsubscribed(SessionUnsubscribedRequest) returns (EmptySuccess) {};
 
   rpc OnSessionResumed(SessionResumedRequest) returns (EmptySuccess) {};
 
@@ -62,12 +60,18 @@ message ProviderLoadedRequest {
   RequestMeta meta = 2;
 }
 
-message ProviderUnloadedRequest { RequestMeta meta = 1; }
+message ProviderUnloadedRequest {
+
+  RequestMeta meta = 1;
+}
 
 message ClientConnectRequest {
 
   ConnInfo conninfo = 1;
 
+  // MQTT CONNECT packet's properties (MQTT v5.0)
+  //
+  // It should be empty on MQTT v3.1.1/v3.1 or others protocol
   repeated Property props = 2;
 
   RequestMeta meta = 3;
@@ -248,10 +252,12 @@ message MessageAckedRequest {
 
 // Responsed by `ProviderLoadedRequest`
 
-message LoadedResponse { repeated HookSpec hooks = 1; }
+message LoadedResponse {
 
-// Responsed by `ClientAuthenticateRequest` `ClientAuthorizeRequest`
-// `MessagePublishRequest`
+  repeated HookSpec hooks = 1;
+}
+
+// Responsed by `ClientAuthenticateRequest` `ClientAuthorizeRequest` `MessagePublishRequest`
 
 message ValuedResponse {
 
@@ -272,8 +278,7 @@ message ValuedResponse {
 
   oneof value {
 
-    // Boolean result, used on the 'client.authenticate', 'client.authorize'
-    // hooks
+    // Boolean result, used on the 'client.authenticate', 'client.authorize' hooks
     bool bool_result = 3;
 
     // Message result, used on the 'message.*' hooks
@@ -283,7 +288,7 @@ message ValuedResponse {
 
 // no Response by other Requests
 
-message EmptySuccess {}
+message EmptySuccess { }
 
 //------------------------------------------------------------------------------
 // Basic data types
@@ -299,6 +304,7 @@ message BrokerInfo {
 
   string datetime = 4;
 }
+
 
 message HookSpec {
 
@@ -360,9 +366,9 @@ message ClientInfo {
 
   string mountpoint = 8;
 
-  bool is_superuser = 9;
+  bool  is_superuser = 9;
 
-  bool anonymous = 10;
+  bool  anonymous = 10;
 
   // common name of client TLS cert
   string cn = 11;
@@ -383,7 +389,7 @@ message Message {
 
   string topic = 5;
 
-  bytes payload = 6;
+  bytes  payload = 6;
 
   uint64 timestamp = 7;
 
@@ -449,8 +455,7 @@ message SubOpts {
   //        RETAIN flag they were published with.
   //  If 0, Application Messages forwarded using this subscription have the
   //        RETAIN flag set to 0.
-  // Retained messages sent when the subscription is established have the RETAIN
-  // flag set to 1.
+  // Retained messages sent when the subscription is established have the RETAIN flag set to 1.
   uint32 rap = 4;
 
   // The No Local option (MQTT v5.0)

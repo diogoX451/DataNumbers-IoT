@@ -12,6 +12,12 @@ type Pulsar struct {
 	Port string
 }
 
+type MessagePulsar struct {
+	DeviceId string
+	Type     string
+	Content  interface{}
+}
+
 func NewPulsar() *Pulsar {
 	return &Pulsar{
 		Host: os.Getenv("PULSAR_HOST"),
@@ -34,3 +40,14 @@ func (p *Pulsar) Connect() *pulsar.Client {
 
 	return &client
 }
+
+// func (m *MessagePulsar) SendMessage(client) error {
+
+// 	codec, err := goavro.NewCodec(`
+// 		{
+// 			"type": "message",
+// 			"a
+// 		}
+// 	`)
+
+// }

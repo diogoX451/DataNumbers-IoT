@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/gateway-emqx-datanumbers/internal/service/database"
@@ -12,14 +11,16 @@ import (
 
 type Server struct {
 	exhook.UnimplementedHookProviderServer
-	db *database.Database
+	db database.Database
+}
+
+func NewServerGRPC(db database.Database) *Server {
+	return &Server{
+		db: db,
+	}
 }
 
 var cnter *util.Counter = util.NewCounter(0, 100)
-
-func (s *Server) NewServerHook(db *database.Database) *Server {
-	return &Server{}
-}
 
 func (s *Server) OnProviderLoaded(ctx context.Context, in *exhook.ProviderLoadedRequest) (*exhook.LoadedResponse, error) {
 	cnter.Count(1)
@@ -74,9 +75,18 @@ func (s *Server) OnClientDisconnected(ctx context.Context, in *exhook.ClientDisc
 
 func (s *Server) OnClientAuthenticate(ctx context.Context, in *exhook.ClientAuthenticateRequest) (*exhook.ValuedResponse, error) {
 	cnter.Count(1)
-	reply := &exhook.ValuedResponse{}
-	reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
-	reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: true}
+	reply := &exhook.ValuedResponse{
+		Type: exhook.ValuedResponse_CONTINUE,
+	}
+
+	_, err := s.db.Query("SELECT * FROM auth.users WHERE username = $1", in.Clientinfo.Username)
+
+	if err != nil {
+		reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
+		reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: false}
+		return reply, nil
+	}
+
 	return reply, nil
 }
 
@@ -131,42 +141,18 @@ func (s *Server) OnSessionTerminated(ctx context.Context, in *exhook.SessionTerm
 	cnter.Count(1)
 	return &exhook.EmptySuccess{}, nil
 }
-
 func (s *Server) OnMessagePublish(ctx context.Context, in *exhook.MessagePublishRequest) (*exhook.ValuedResponse, error) {
 	cnter.Count(1)
-	reply := &exhook.ValuedResponse{}
-	var data Data
-	if err := json.Unmarshal(in.Message.Payload, &data); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal payload: %v", err)
+	reply := &exhook.ValuedResponse{
+		Type: exhook.ValuedResponse_CONTINUE,
 	}
 
-	if data.Type == "" && data.Content == nil {
+	_, err := s.db.Query("SELECT * FROM mqtt_acl WHERE topic = $1", in.Message.Topic)
+	if err != nil {
 		reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
-		reply.Value = &exhook.ValuedResponse_Message{Message: in.Message}
+		reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: false}
 		return reply, nil
 	}
-
-	switch data.Type {
-	case TEMPERATURE_SENSOR:
-		temp := data.Content.(TemperatureData)
-		if temp.Value > 30 {
-			in.Message.Headers["allow_publish"] = "false"
-			in.Message.Payload = []byte("")
-		}
-
-		temp.Value = temp.Value + 1
-
-	case HUMIDITY_SENSOR:
-		hum := data.Content.(HumidityData)
-		if hum.Value > 80 {
-			in.Message.Headers["allow_publish"] = "false"
-			in.Message.Payload = []byte("")
-		}
-
-	}
-
-	reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
-	reply.Value = &exhook.ValuedResponse_Message{Message: in.Message}
 
 	return reply, nil
 }
@@ -191,6 +177,8 @@ func (s *Server) OnMessageDelivered(ctx context.Context, in *exhook.MessageDeliv
 
 func (s *Server) OnMessageDropped(ctx context.Context, in *exhook.MessageDroppedRequest) (*exhook.EmptySuccess, error) {
 	cnter.Count(1)
+	fmt.Println("OnMessageDropped")
+	fmt.Println(in)
 	return &exhook.EmptySuccess{}, nil
 }
 

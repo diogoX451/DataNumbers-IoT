@@ -10,21 +10,29 @@ import (
 	"github.com/gateway-emqx-datanumbers/internal/service/database"
 	serverGrpc "github.com/gateway-emqx-datanumbers/internal/service/grpc"
 	gateway_emqx "github.com/gateway-emqx-datanumbers/internal/service/grpc/emqx.io/grpc/exhook"
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 )
 
 var db *database.Postgres
 
 func init() {
+	if err := godotenv.Load(); err != nil {
+		panic(err)
+	}
+
 	db = database.NewPostgres()
 	db.Connect()
+
+	serverGrpc.NewServerGRPC(db)
+
 }
 
 func main() {
 	emqx := emqxConfig.NewEmqx("client-1")
 	client := emqx.Connect()
 	test := client.Subscribe(
-		"esp32/temperatura",
+		"topic/#",
 		0,
 		func(c mqtt.Client, m mqtt.Message) {
 			emqxService.MessageHandler(c, m)
