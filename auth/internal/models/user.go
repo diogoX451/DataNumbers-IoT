@@ -14,6 +14,7 @@ type User struct {
 	Name      string    `gorm:"column:name;unique;not null"`
 	Email     string    `gorm:"column:email;unique;not null"`
 	Password  string    `gorm:"column:password;not null" json:"-"`
+	Username  string    `gorm:"column:username;unique;not null"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

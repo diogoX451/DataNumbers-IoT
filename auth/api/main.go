@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	tokenVerifyRoute "github.com/data_numbers/api/routes/token/verify"
 	userCreateRoute "github.com/data_numbers/api/routes/user/create"
@@ -17,10 +16,9 @@ import (
 var dbConnect *gorm.DB
 
 func init() {
-	if os.Getenv("GO_ENV") == "development" {
-		if err := godotenv.Load(); err != nil {
-			log.Println("No .env file found")
-		}
+
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found", err)
 	}
 
 	db := &database.Postgres{}
@@ -31,12 +29,12 @@ func main() {
 	router := gin.Default()
 	api := router.Group("/auth")
 
-	gin.SetMode(gin.ReleaseMode)
+	// gin.SetMode(gin.ReleaseMode)
 
 	userCreateRoute.InitCreateUserRouter(dbConnect, api)
 	userLoginRoute.InitLoginRoutes(dbConnect, api)
 	userUpdateRoute.InitUpdateRoutes(dbConnect, api)
 	tokenVerifyRoute.InitVerifyTokenRoutes(dbConnect, api)
 
-	router.Run(":3000")
+	router.Run(":4050")
 }
