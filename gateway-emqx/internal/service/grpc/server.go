@@ -14,8 +14,8 @@ type Server struct {
 	db database.Database
 }
 
-func NewServerGRPC(db database.Database) *Server {
-	return &Server{
+func NewServerGRPC(db database.Database) Server {
+	return Server{
 		db: db,
 	}
 }
@@ -76,10 +76,25 @@ func (s *Server) OnClientDisconnected(ctx context.Context, in *exhook.ClientDisc
 func (s *Server) OnClientAuthenticate(ctx context.Context, in *exhook.ClientAuthenticateRequest) (*exhook.ValuedResponse, error) {
 	cnter.Count(1)
 	reply := &exhook.ValuedResponse{}
-	fmt.Println("OnClientAuthenticate")
-	fmt.Println(in)
+	consult, err := s.db.Query("SELECT username FROM auth.users WHERE username = $1", in.Clientinfo.Username)
+	if err != nil {
+		reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
+		reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: false}
+		return reply, nil
+	}
+
+	if _, ok := consult.([]map[string]interface{}); ok {
+		if len(consult.([]map[string]interface{})) == 0 {
+			reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
+			reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: false}
+			return reply, nil
+		}
+	}
+
+	exhook.
+
 	reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
-	reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: false}
+	reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: true}
 	return reply, nil
 
 }
@@ -140,8 +155,9 @@ func (s *Server) OnMessagePublish(ctx context.Context, in *exhook.MessagePublish
 	reply := &exhook.ValuedResponse{}
 	fmt.Println("OnMessagePublish")
 	fmt.Println(in.Message)
+
 	reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
-	reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: false}
+	reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: true}
 	return reply, nil
 
 }

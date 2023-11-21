@@ -22,7 +22,7 @@ func NewPostgres() *Postgres {
 }
 
 func (p *Postgres) Connect() error {
-	pool, err := pgxpool.New(context.Background(), os.Getenv("DB_URL"))
+	pool, err := pgxpool.New(context.Background(), os.Getenv("DB_DNS"))
 
 	if err != nil {
 		panic("Couldn't connect to database")
@@ -56,7 +56,6 @@ func (p *Postgres) Query(query string, params ...interface{}) (interface{}, erro
 	if err != nil {
 		return nil, err
 	}
-	defer p.db.Close()
 
 	var results []map[string]interface{}
 

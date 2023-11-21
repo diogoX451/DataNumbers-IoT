@@ -23,8 +23,8 @@ func init() {
 
 	db = database.NewPostgres()
 	db.Connect()
-
-	serverGrpc.NewServerGRPC(db)
+	db.SetConnection(int32(2))
+	db.SetMinConnections(int32(2))
 
 }
 
@@ -39,6 +39,8 @@ func main() {
 		},
 	)
 
+	defer db.Close()
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", 5051))
 
 	if err != nil {
@@ -46,8 +48,8 @@ func main() {
 	}
 
 	serverGRPC := grpc.NewServer()
-
-	gateway_emqx.RegisterHookProviderServer(serverGRPC, &serverGrpc.Server{})
+	server := serverGrpc.NewServerGRPC(db)
+	gateway_emqx.RegisterHookProviderServer(serverGRPC, &server)
 
 	if err := serverGRPC.Serve(lis); err != nil {
 		panic(err)
