@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	emqxConfig "github.com/gateway-emqx-datanumbers/internal/config/emqx"
-	emqxService "github.com/gateway-emqx-datanumbers/internal/service"
 	"github.com/gateway-emqx-datanumbers/internal/service/database"
 	serverGrpc "github.com/gateway-emqx-datanumbers/internal/service/grpc"
 	gateway_emqx "github.com/gateway-emqx-datanumbers/internal/service/grpc/emqx.io/grpc/exhook"
@@ -29,15 +27,8 @@ func init() {
 }
 
 func main() {
-	emqx := emqxConfig.NewEmqx("client-1")
-	client := emqx.Connect()
-	test := client.Subscribe(
-		"topic/#",
-		0,
-		func(c mqtt.Client, m mqtt.Message) {
-			emqxService.MessageHandler(c, m)
-		},
-	)
+	emqx := emqxConfig.NewEmqx()
+	emqx.Connect()
 
 	defer db.Close()
 
@@ -54,18 +45,6 @@ func main() {
 	if err := serverGRPC.Serve(lis); err != nil {
 		panic(err)
 	}
-
-	token := client.Publish(
-		"esp32/temperatura",
-		0,
-		false,
-		"Hello World",
-	)
-
-	fmt.Println(test.Done())
-	fmt.Println(test.Error())
-	fmt.Println(token.Wait())
-	fmt.Println(token.Error())
 
 	select {}
 }

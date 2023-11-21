@@ -29,8 +29,6 @@ func (s *Server) OnProviderLoaded(ctx context.Context, in *exhook.ProviderLoaded
 		{Name: "client.connack"},
 		{Name: "client.connected"},
 		{Name: "client.disconnected"},
-		{Name: "client.authenticate"},
-		{Name: "client.authorize"},
 		{Name: "client.subscribe"},
 		{Name: "client.unsubscribe"},
 		{Name: "session.created"},
@@ -71,40 +69,6 @@ func (s *Server) OnClientConnected(ctx context.Context, in *exhook.ClientConnect
 func (s *Server) OnClientDisconnected(ctx context.Context, in *exhook.ClientDisconnectedRequest) (*exhook.EmptySuccess, error) {
 	cnter.Count(1)
 	return &exhook.EmptySuccess{}, nil
-}
-
-func (s *Server) OnClientAuthenticate(ctx context.Context, in *exhook.ClientAuthenticateRequest) (*exhook.ValuedResponse, error) {
-	cnter.Count(1)
-	reply := &exhook.ValuedResponse{}
-	consult, err := s.db.Query("SELECT username FROM auth.users WHERE username = $1", in.Clientinfo.Username)
-	if err != nil {
-		reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
-		reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: false}
-		return reply, nil
-	}
-
-	if _, ok := consult.([]map[string]interface{}); ok {
-		if len(consult.([]map[string]interface{})) == 0 {
-			reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
-			reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: false}
-			return reply, nil
-		}
-	}
-
-	exhook.
-
-	reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
-	reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: true}
-	return reply, nil
-
-}
-
-func (s *Server) OnClientAuthorize(ctx context.Context, in *exhook.ClientAuthorizeRequest) (*exhook.ValuedResponse, error) {
-	cnter.Count(1)
-	reply := &exhook.ValuedResponse{}
-	reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
-	reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: true}
-	return reply, nil
 }
 
 func (s *Server) OnClientSubscribe(ctx context.Context, in *exhook.ClientSubscribeRequest) (*exhook.EmptySuccess, error) {

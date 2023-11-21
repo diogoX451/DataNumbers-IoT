@@ -25,8 +25,6 @@ const (
 	HookProvider_OnClientConnack_FullMethodName       = "/emqx.exhook.v2.HookProvider/OnClientConnack"
 	HookProvider_OnClientConnected_FullMethodName     = "/emqx.exhook.v2.HookProvider/OnClientConnected"
 	HookProvider_OnClientDisconnected_FullMethodName  = "/emqx.exhook.v2.HookProvider/OnClientDisconnected"
-	HookProvider_OnClientAuthenticate_FullMethodName  = "/emqx.exhook.v2.HookProvider/OnClientAuthenticate"
-	HookProvider_OnClientAuthorize_FullMethodName     = "/emqx.exhook.v2.HookProvider/OnClientAuthorize"
 	HookProvider_OnClientSubscribe_FullMethodName     = "/emqx.exhook.v2.HookProvider/OnClientSubscribe"
 	HookProvider_OnClientUnsubscribe_FullMethodName   = "/emqx.exhook.v2.HookProvider/OnClientUnsubscribe"
 	HookProvider_OnSessionCreated_FullMethodName      = "/emqx.exhook.v2.HookProvider/OnSessionCreated"
@@ -52,8 +50,6 @@ type HookProviderClient interface {
 	OnClientConnack(ctx context.Context, in *ClientConnackRequest, opts ...grpc.CallOption) (*EmptySuccess, error)
 	OnClientConnected(ctx context.Context, in *ClientConnectedRequest, opts ...grpc.CallOption) (*EmptySuccess, error)
 	OnClientDisconnected(ctx context.Context, in *ClientDisconnectedRequest, opts ...grpc.CallOption) (*EmptySuccess, error)
-	OnClientAuthenticate(ctx context.Context, in *ClientAuthenticateRequest, opts ...grpc.CallOption) (*ValuedResponse, error)
-	OnClientAuthorize(ctx context.Context, in *ClientAuthorizeRequest, opts ...grpc.CallOption) (*ValuedResponse, error)
 	OnClientSubscribe(ctx context.Context, in *ClientSubscribeRequest, opts ...grpc.CallOption) (*EmptySuccess, error)
 	OnClientUnsubscribe(ctx context.Context, in *ClientUnsubscribeRequest, opts ...grpc.CallOption) (*EmptySuccess, error)
 	OnSessionCreated(ctx context.Context, in *SessionCreatedRequest, opts ...grpc.CallOption) (*EmptySuccess, error)
@@ -125,24 +121,6 @@ func (c *hookProviderClient) OnClientConnected(ctx context.Context, in *ClientCo
 func (c *hookProviderClient) OnClientDisconnected(ctx context.Context, in *ClientDisconnectedRequest, opts ...grpc.CallOption) (*EmptySuccess, error) {
 	out := new(EmptySuccess)
 	err := c.cc.Invoke(ctx, HookProvider_OnClientDisconnected_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *hookProviderClient) OnClientAuthenticate(ctx context.Context, in *ClientAuthenticateRequest, opts ...grpc.CallOption) (*ValuedResponse, error) {
-	out := new(ValuedResponse)
-	err := c.cc.Invoke(ctx, HookProvider_OnClientAuthenticate_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *hookProviderClient) OnClientAuthorize(ctx context.Context, in *ClientAuthorizeRequest, opts ...grpc.CallOption) (*ValuedResponse, error) {
-	out := new(ValuedResponse)
-	err := c.cc.Invoke(ctx, HookProvider_OnClientAuthorize_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -276,8 +254,6 @@ type HookProviderServer interface {
 	OnClientConnack(context.Context, *ClientConnackRequest) (*EmptySuccess, error)
 	OnClientConnected(context.Context, *ClientConnectedRequest) (*EmptySuccess, error)
 	OnClientDisconnected(context.Context, *ClientDisconnectedRequest) (*EmptySuccess, error)
-	OnClientAuthenticate(context.Context, *ClientAuthenticateRequest) (*ValuedResponse, error)
-	OnClientAuthorize(context.Context, *ClientAuthorizeRequest) (*ValuedResponse, error)
 	OnClientSubscribe(context.Context, *ClientSubscribeRequest) (*EmptySuccess, error)
 	OnClientUnsubscribe(context.Context, *ClientUnsubscribeRequest) (*EmptySuccess, error)
 	OnSessionCreated(context.Context, *SessionCreatedRequest) (*EmptySuccess, error)
@@ -315,12 +291,6 @@ func (UnimplementedHookProviderServer) OnClientConnected(context.Context, *Clien
 }
 func (UnimplementedHookProviderServer) OnClientDisconnected(context.Context, *ClientDisconnectedRequest) (*EmptySuccess, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OnClientDisconnected not implemented")
-}
-func (UnimplementedHookProviderServer) OnClientAuthenticate(context.Context, *ClientAuthenticateRequest) (*ValuedResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method OnClientAuthenticate not implemented")
-}
-func (UnimplementedHookProviderServer) OnClientAuthorize(context.Context, *ClientAuthorizeRequest) (*ValuedResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method OnClientAuthorize not implemented")
 }
 func (UnimplementedHookProviderServer) OnClientSubscribe(context.Context, *ClientSubscribeRequest) (*EmptySuccess, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OnClientSubscribe not implemented")
@@ -478,42 +448,6 @@ func _HookProvider_OnClientDisconnected_Handler(srv interface{}, ctx context.Con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(HookProviderServer).OnClientDisconnected(ctx, req.(*ClientDisconnectedRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HookProvider_OnClientAuthenticate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ClientAuthenticateRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HookProviderServer).OnClientAuthenticate(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: HookProvider_OnClientAuthenticate_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HookProviderServer).OnClientAuthenticate(ctx, req.(*ClientAuthenticateRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HookProvider_OnClientAuthorize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ClientAuthorizeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HookProviderServer).OnClientAuthorize(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: HookProvider_OnClientAuthorize_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HookProviderServer).OnClientAuthorize(ctx, req.(*ClientAuthorizeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -782,14 +716,6 @@ var HookProvider_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "OnClientDisconnected",
 			Handler:    _HookProvider_OnClientDisconnected_Handler,
-		},
-		{
-			MethodName: "OnClientAuthenticate",
-			Handler:    _HookProvider_OnClientAuthenticate_Handler,
-		},
-		{
-			MethodName: "OnClientAuthorize",
-			Handler:    _HookProvider_OnClientAuthorize_Handler,
 		},
 		{
 			MethodName: "OnClientSubscribe",
