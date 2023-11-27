@@ -18,9 +18,9 @@ const ForgetPassword = () => {
           <Card.Body className="p-6">
             <div className="mb-4">
               <Link href="/"><Image src="/images/brand/logo/logo-primary.svg" className="mb-2" alt="" /></Link>
-              <p className="mb-6">Insira um email para redefinir sua senha.</p>
+              <p className="mb-6">Don&apos;t worry, we&apos;ll send you an email to reset your password.</p>
             </div>
-            {/* Form */}
+            {/* Form */} 
             <Form>
               {/* Email */}
               <Form.Group className="mb-3" controlId="email">
@@ -29,9 +29,9 @@ const ForgetPassword = () => {
               </Form.Group>
               {/* Button */}
               <div className="mb-3 d-grid">
-                <Button variant="primary" type="submit">Redefina sua senha</Button>
+                <Button variant="primary" type="submit">Reset Password</Button>
               </div>
-              <span>Possui uma conta? <Link href="/authentication/sign-in">Entrar</Link></span>
+              <span>Don&apos;t have an account? <Link href="/authentication/sign-in">Sign In</Link></span>
             </Form>
           </Card.Body>
         </Card>

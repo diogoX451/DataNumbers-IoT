@@ -1,12 +1,9 @@
 'use client'
 
-// import node module libraries
+import React, { useState } from 'react';
 import { Row, Col, Card, Form, Button, Image } from 'react-bootstrap';
 import Link from 'next/link';
 import useMounted from '@/hooks/useMounted';
-
-// import hooks
-
 
 const SignUp = () => {
   const hasMounted = useMounted();
@@ -17,16 +14,18 @@ const SignUp = () => {
         <Card className="smooth-shadow-md">
           {/* Card body */}
           <Card.Body className="p-6">
-          <div className="mb-4">
-              <Link href="/"><Image src="/images/brand/logo/logo-primary.svg" className="mb-2" alt="" /></Link>
-              <p className="mb-6">Insira suas informações.</p>
+            <div className="mb-4 d-flex align-items-center">
+              <Link href="/">
+                <Image src="/images/avatar/Numbers.png" className="mb-2 me-2" alt="Logo" width={30} height={30} />
+              </Link>
+              <p className="mb-6">DataNumbERS-IOT</p>
             </div>
             {/* Form */}
             
             <Form>
               {/* Username */}
               <Form.Group className="mb-3" controlId="username">
-                <Form.Label>Nome de Usuário</Form.Label>
+                <Form.Label>Username or email</Form.Label>
                 <Form.Control type="text" name="username" placeholder="User Name" required="" />
               </Form.Group>
 
@@ -38,13 +37,13 @@ const SignUp = () => {
 
               {/* Password */}
               <Form.Group className="mb-3" controlId="password">
-                <Form.Label>Senha</Form.Label>
+                <Form.Label>Password</Form.Label>
                 <Form.Control type="password" name="password" placeholder="**************" required="" />
               </Form.Group>
 
               {/* Confirm Password */}
               <Form.Group className="mb-3" controlId="confirm-password">
-                <Form.Label>Confirme sua senha</Form.Label>
+                <Form.Label>Confirm Password</Form.Label>
                 <Form.Control type="password" name="confirm-password" placeholder="**************" required="" />
               </Form.Group>
 
@@ -53,7 +52,7 @@ const SignUp = () => {
                 <Form.Check type="checkbox" id="check-api-checkbox">
                   <Form.Check.Input type="checkbox" />
                   <Form.Check.Label>
-                    Eu concordo com <Link href="#"> os termos de serviços </Link> and <Link href="#"> e com a politica de privacidade.</Link>
+                    I agree to the <Link href="#"> Terms of Service </Link> and <Link href="#"> Privacy Policy.</Link>
                   </Form.Check.Label>
                 </Form.Check>
               </div>
@@ -61,14 +60,14 @@ const SignUp = () => {
               <div>
                 {/* Button */}
                 <div className="d-grid">
-                  <Button variant="primary" type="submit">Criar conta</Button>
+                  <Button variant="primary" type="submit">Create Free Account</Button>
                 </div>
                 <div className="d-md-flex justify-content-between mt-4">
                   <div className="mb-2 mb-md-0">
-                    <Link href="/authentication/sign-in" className="fs-5">Já é cadastrado? Entrar </Link>
+                    <Link href="/authentication/sign-in" className="fs-5">Already member? Login </Link>
                   </div>
                   <div>
-                    <Link href="/authentication/forget-password" className="text-inherit fs-5">Esqueceu sua senha?</Link>
+                    <Link href="/authentication/forget-password" className="text-inherit fs-5">Forgot your password?</Link>
                   </div>
                 </div>
               </div>
