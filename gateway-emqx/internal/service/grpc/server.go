@@ -2,11 +2,13 @@ package grpc
 
 import (
 	"context"
-	"fmt"
+	"time"
 
-	"github.com/gateway-emqx-datanumbers/internal/service/database"
+	"github.com/gateway-emqx-datanumbers/internal/database"
+	"github.com/gateway-emqx-datanumbers/internal/model"
 	"github.com/gateway-emqx-datanumbers/internal/service/grpc/emqx.io/grpc/exhook"
 	"github.com/gateway-emqx-datanumbers/util"
+	"github.com/gofrs/uuid"
 )
 
 type Server struct {
@@ -117,11 +119,31 @@ func (s *Server) OnSessionTerminated(ctx context.Context, in *exhook.SessionTerm
 func (s *Server) OnMessagePublish(ctx context.Context, in *exhook.MessagePublishRequest) (*exhook.ValuedResponse, error) {
 	cnter.Count(1)
 	reply := &exhook.ValuedResponse{}
-	fmt.Println("OnMessagePublish")
-	fmt.Println(in.Message)
+
+	format := model.NewData(
+		in.Message.Topic,
+		in.Message.Payload,
+	)
+
+	if !format.Validate() {
+		go func(in *exhook.MessagePublishRequest) {
+			id := uuid.Must(uuid.NewV4())
+			s.db.Insert(
+				"INSERT INTO gateway.emqx_history (id, observation, type, username, topic, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+				id,
+				"Invalid data format",
+				"error",
+				in.Message.Headers["username"],
+				in.Message.Topic,
+				time.Now().UTC().Local(),
+			)
+		}(in)
+		in.Message.Headers["allow_publish"] = "false"
+		in.Message.Payload = []byte("")
+	}
 
 	reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
-	reply.Value = &exhook.ValuedResponse_BoolResult{BoolResult: true}
+	reply.Value = &exhook.ValuedResponse_Message{Message: in.Message}
 	return reply, nil
 
 }
@@ -146,8 +168,15 @@ func (s *Server) OnMessageDelivered(ctx context.Context, in *exhook.MessageDeliv
 
 func (s *Server) OnMessageDropped(ctx context.Context, in *exhook.MessageDroppedRequest) (*exhook.EmptySuccess, error) {
 	cnter.Count(1)
-	fmt.Println("OnMessageDropped")
-	fmt.Println(in)
+	s.db.Insert(
+		"INSERT INTO gateway.emqx_history (id, observation, type, username, topic, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+		in.Message.Id,
+		"Message dropped",
+		"error",
+		in.Message.Headers["username"],
+		in.Message.Topic,
+		time.Now().UTC().Local(),
+	)
 	return &exhook.EmptySuccess{}, nil
 }
 

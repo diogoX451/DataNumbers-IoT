@@ -13,13 +13,14 @@ type Emqx struct {
 	Options *mqtt.ClientOptions
 }
 
-func NewEmqx() *Emqx {
+func NewEmqx(pc *emqxService.ServiceEmqx) *Emqx {
 	options := mqtt.NewClientOptions().AddBroker("tcp://localhost:1883")
 	options.AutoReconnect = true
 	options.Username = "gateway-emqx"
+	pc.InitializeProducer()
 	options.OnConnect = func(client mqtt.Client) {
 		client.Subscribe("topic/#", 0, func(c mqtt.Client, m mqtt.Message) {
-			emqxService.MessageHandler(c, m)
+			pc.MessageHandler(c, m)
 		})
 	}
 
