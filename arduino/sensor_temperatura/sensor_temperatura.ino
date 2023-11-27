@@ -14,8 +14,9 @@ const char *pass = "B8EB15A6";
 
 // EMQX
 const char *mqtt_broker = "192.168.0.46";
-const char *topic = "esp32/temperatura";
+const char *topic = "topic/3cb23058-9be0-4d08-8cf9-6f0183acd7a2";
 const int mqtt_port = 1883;
+const char* mqtt_username = "diogoX451";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -42,9 +43,9 @@ void setup()
     client.setCallback(callback);
     while (!client.connected())
     {
-        String client_id = "client-2";
+        String client_id = "hello";
         Serial.printf("The client %s connects to the public mqtt broker\n", client_id.c_str());
-        if (client.connect(client_id.c_str()))
+        if (client.connect(client_id.c_str(), mqtt_username, ""))
         {
             Serial.println("Public emqx mqtt broker connected");
         }
@@ -85,8 +86,8 @@ void loop()
         return;
     }
 
-    char msg[50];
-    snprintf(msg, sizeof(msg), "{\"temperatura\": %.2f, \"umidade\": %.2f}", t, h);
+    char msg[128];
+    snprintf(msg, sizeof(msg), "{\"topic\": \"%s\", \"payload\": [{\"temperatura\": %.2f}, {\"umidade\": %.2f}]}", topic, t, h);
 
     if (client.connected() && client.publish(topic, msg))
     {

@@ -56,6 +56,7 @@ services:
       - data-numbers-network
 
   db:
+    user: "root"
     container_name: data-numbers-db
     image: postgres:15
     restart: always
@@ -83,6 +84,11 @@ services:
       - "./data:/pulsar/data"
     networks:
       - data-numbers-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
 
   redis:
     container_name: 'redis'
@@ -110,6 +116,7 @@ services:
 
 volumes:
   timescaledb-volume:
+  postgres-data:
 
 
 networks:

@@ -36,5 +36,5 @@ func main() {
 	userUpdateRoute.InitUpdateRoutes(dbConnect, api)
 	tokenVerifyRoute.InitVerifyTokenRoutes(dbConnect, api)
 
-	router.Run(":4050")
+	router.Run(":3000")
 }

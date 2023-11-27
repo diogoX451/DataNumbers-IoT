@@ -4,4 +4,5 @@ auth/public_key.pem
 auth/.env
 datanumbers-iot-web/.next/
 datanumbers-iot-web/node_modules/
-```
+gateway-emqx/.env
+gateway-emqx/app.log
