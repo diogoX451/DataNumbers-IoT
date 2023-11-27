@@ -1,9 +1,13 @@
 package usercreate
 
-import "github.com/data_numbers/internal/models"
+import (
+	"fmt"
+
+	"github.com/data_numbers/internal/models"
+)
 
 type IUserCreateService interface {
-	CreateUser(input UserCreateInput) (*models.User, error)
+	CreateUser(input UserCreateInput, mqttAcl UserMqttAclInput) (*models.User, error)
 	GetUser(id string) (*models.User, error)
 }
 
@@ -17,11 +21,19 @@ func NewService(repo IRepository) *UserCreateService {
 	}
 }
 
-func (service *UserCreateService) CreateUser(input UserCreateInput) (*models.User, error) {
+func (service *UserCreateService) CreateUser(input UserCreateInput, mqttAcl UserMqttAclInput) (*models.User, error) {
 	user, err := service.repo.CreateUser(input)
 	if err != nil {
 		return nil, err
 	}
+
+	go func() {
+		mqttAcl.UserId = user.ID
+		_, err := service.repo.CreateMqttAcl(mqttAcl)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
 
 	return user, nil
 }

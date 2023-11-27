@@ -23,7 +23,12 @@ func (handler *CreateUserHandler) CreateUser(ctx *gin.Context) {
 		return
 	}
 
-	user, err := handler.service.CreateUser(input)
+	mqttAcl := usercreate.UserMqttAclInput{
+		Ipaddr: ctx.ClientIP(),
+	}
+
+	user, err := handler.service.CreateUser(input, mqttAcl)
+	
 	if err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
