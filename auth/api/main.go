@@ -8,6 +8,7 @@ import (
 	userCreateRoute "github.com/data_numbers/api/routes/user/create"
 	userLoginRoute "github.com/data_numbers/api/routes/user/login"
 	userUpdateRoute "github.com/data_numbers/api/routes/user/update"
+	userfindRoutes "github.com/data_numbers/api/routes/user/user-find"
 	"github.com/data_numbers/internal/database"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -45,6 +46,7 @@ func main() {
 	userLoginRoute.InitLoginRoutes(dbConnect, api)
 	userUpdateRoute.InitUpdateRoutes(dbConnect, api)
 	tokenVerifyRoute.InitVerifyTokenRoutes(dbConnect, api)
+	userfindRoutes.InitUserFindRoutes(dbConnect, api)
 
 	router.Run(":3000")
 }
