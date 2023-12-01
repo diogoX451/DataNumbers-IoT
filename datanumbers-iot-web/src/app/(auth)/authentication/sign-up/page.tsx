@@ -5,6 +5,8 @@ import { Row, Col, Card, Form, Button, Image, Modal } from "react-bootstrap";
 import Link from "next/link";
 import useMounted from "../../../../hooks/useMounted";
 import useAxios from "axios-hooks";
+import { MessageProps } from "../../../../interfaces/MessageProps";
+import { ModalProps } from "../../../../interfaces/ModalProps";
 
 interface UserProps {
   name: string;
@@ -12,20 +14,6 @@ interface UserProps {
   username: string;
   password: string;
   confirmPassword: string;
-}
-
-interface MessageProps {
-  show: boolean;
-  message: string;
-  type: "danger" | "success" | "warning" | "info";
-}
-
-interface ModalProps {
-  open: boolean;
-  message: string;
-  type: "danger" | "success" | "warning" | "info";
-  title: string;
-  button?: () => void;
 }
 
 const SignUp = () => {
@@ -70,6 +58,14 @@ const SignUp = () => {
           show: true,
           message: "Este nome de usuário já existe",
           type: "danger",
+        });
+      }
+
+      if (response.status === 200 && !response.data.data) {
+        setShowMensage({
+          show: false,
+          message: "",
+          type: "success",
         });
       }
     } catch (error) {
