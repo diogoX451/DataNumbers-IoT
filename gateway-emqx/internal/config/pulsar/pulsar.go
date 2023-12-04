@@ -23,8 +23,9 @@ func NewPulsar() *Pulsar {
 func (p *Pulsar) Connect() *pulsar.Client {
 	client, err := pulsar.NewClient(pulsar.ClientOptions{
 		URL:               "pulsar://" + p.Host + ":" + p.Port,
-		OperationTimeout:  50 * time.Second,
-		ConnectionTimeout: 50 * time.Second,
+		OperationTimeout:  30 * time.Second,
+		ConnectionTimeout: 30 * time.Second,
+		MemoryLimitBytes:  0,
 	})
 
 	if err != nil {

@@ -48,7 +48,7 @@ func (s *ServiceEmqx) InitializeProducer() {
 	// jsonSchema := pulsar.NewJSONSchema(schemaDef, properties)
 
 	producer, err := s.pulsarClient.CreateProducer(pulsar.ProducerOptions{
-		Topic: "emqx_data",
+		Topic: "devices",
 	})
 	if err != nil {
 		log.Fatalf("Could not instantiate Pulsar producer: %v", err)

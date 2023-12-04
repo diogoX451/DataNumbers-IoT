@@ -13,7 +13,7 @@ const char *ssid = "CLARO_2GEB15A6";
 const char *pass = "B8EB15A6";
 
 // EMQX
-const char *mqtt_broker = "192.168.0.46";
+const char *mqtt_broker = "192.168.0.29";
 const char *topic = "topic/3cb23058-9be0-4d08-8cf9-6f0183acd7a2";
 const int mqtt_port = 1883;
 const char* mqtt_username = "diogoX451";
