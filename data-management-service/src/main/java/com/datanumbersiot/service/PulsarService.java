@@ -17,7 +17,7 @@ public class PulsarService {
     private final RetriverService retriver;
 
     @Value("${spring.pulsar.topic}")
-    private String pulsarTopic;
+    private static final String STRING_TOPIC = "string-topic";
 
     public PulsarService(PulsarClient client, RetriverService retriver) {
         this.client = client;
@@ -25,21 +25,21 @@ public class PulsarService {
     }
 
     @PostConstruct
-    public void init() {
+    public void init() throws PulsarClientException {
         loadConsumer();
     }
 
     public void loadConsumer() {
         try {
             Consumer<String> consumer = client.newConsumer(Schema.STRING)
-                    .topic(pulsarTopic)
-                    .subscriptionName("consumer-data")
+                    .topic("string-topic")
+                    .subscriptionName("string-topic-subscription")
                     .subscribe();
-
+            System.out.println("Consumer created" + consumer.receive());
             while (!Thread.currentThread().isInterrupted()) {
+                System.out.println("Waiting for message...");
                 Message<String> message = consumer.receive();
                 try {
-    
                     System.out.printf("Message received: %s", message.getValue());
                     retriver.data(message.getValue());
                     consumer.acknowledge(message);

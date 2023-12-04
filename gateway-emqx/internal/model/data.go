@@ -21,7 +21,7 @@ func NewData(topic string, payload interface{}) Data {
 
 func (d *Data) Validate() bool {
 	schemna := gojsonschema.NewReferenceLoader(
-		"file:///home/diogox451/Documentos/DataNumbers-IoT/gateway-emqx/internal/model/schema.json",
+		"file:///home/diogo/Documentos/DataNumbers-IoT/gateway-emqx/internal/model/schema.json",
 	)
 
 	var obj interface{}

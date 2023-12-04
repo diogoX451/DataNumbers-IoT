@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gateway-emqx-datanumbers/internal/database"
@@ -141,6 +142,8 @@ func (s *Server) OnMessagePublish(ctx context.Context, in *exhook.MessagePublish
 		in.Message.Headers["allow_publish"] = "false"
 		in.Message.Payload = []byte("")
 	}
+
+	fmt.Println("Publicou")
 
 	reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
 	reply.Value = &exhook.ValuedResponse_Message{Message: in.Message}

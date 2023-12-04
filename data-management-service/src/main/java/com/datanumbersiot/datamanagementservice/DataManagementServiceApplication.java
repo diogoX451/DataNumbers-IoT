@@ -7,13 +7,16 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.pulsar.annotation.EnablePulsar;
 
 import com.datanumbersiot.service.PulsarService;
 
-@SpringBootApplication
 @ComponentScan(basePackages = "com.datanumbersiot")
 @EntityScan("com.datanumbersiot.entity")
 @EnableJpaRepositories(basePackages = "com.datanumbersiot.repository.postgres")
+@EnablePulsar
+@SpringBootApplication
+
 public class DataManagementServiceApplication {
 
 	public static void main(String[] args) {
