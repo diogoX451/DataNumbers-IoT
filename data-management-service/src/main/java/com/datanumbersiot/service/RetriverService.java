@@ -1,23 +1,16 @@
 package com.datanumbersiot.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import com.datanumbersiot.entity.Retriver;
-import com.datanumbersiot.repository.timescale.IRetriverRepository;
 
+@Service
 public class RetriverService {
 
-    @Autowired
-    private final IRetriverRepository repository;
     private final PersisterService persister;
 
-    public RetriverService(IRetriverRepository repository, PersisterService persister) {
-        this.repository = repository;
+    public RetriverService(PersisterService persister) {
         this.persister = persister;
-    }
-
-    public void save(Retriver retriver) {
-        repository.save(retriver);
     }
 
     public void data(String data) {

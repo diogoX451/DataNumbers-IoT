@@ -10,7 +10,7 @@ import org.springframework.boot.jdbc.DataSourceBuilder;
 public class TimescaleConfig {
 
     @Bean
-    @ConfigurationProperties(prefix = "spring.datasource.timescale")
+    @ConfigurationProperties(prefix = "spring.timescale.datasource")
     public DataSource timescaleDataSource() {
         return DataSourceBuilder.create().build();
     }

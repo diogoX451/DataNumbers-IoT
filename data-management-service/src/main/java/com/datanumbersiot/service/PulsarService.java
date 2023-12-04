@@ -4,8 +4,10 @@ import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.Schema;
-import org.apache.pulsar.shade.org.jvnet.hk2.annotations.Service;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import jakarta.annotation.PostConstruct;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.apache.pulsar.client.api.Message;
 
@@ -17,14 +19,17 @@ public class PulsarService {
     @Value("${spring.pulsar.topic}")
     private String pulsarTopic;
 
-    @Autowired
     public PulsarService(PulsarClient client, RetriverService retriver) {
         this.client = client;
         this.retriver = retriver;
+    }
+
+    @PostConstruct
+    public void init() {
         loadConsumer();
     }
 
-    private void loadConsumer() {
+    public void loadConsumer() {
         try {
             Consumer<String> consumer = client.newConsumer(Schema.STRING)
                     .topic(pulsarTopic)
@@ -34,6 +39,7 @@ public class PulsarService {
             while (!Thread.currentThread().isInterrupted()) {
                 Message<String> message = consumer.receive();
                 try {
+    
                     System.out.printf("Message received: %s", message.getValue());
                     retriver.data(message.getValue());
                     consumer.acknowledge(message);
