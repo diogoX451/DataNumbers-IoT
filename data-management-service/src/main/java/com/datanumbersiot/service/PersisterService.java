@@ -1,8 +1,10 @@
 package com.datanumbersiot.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.datanumbersiot.repository.postgres.IPersisterRepository;
+import com.datanumbersiot.entity.timescale.Persister;
+import com.datanumbersiot.repository.timescale.IPersisterRepository;
 
 @Service
 public class PersisterService {
@@ -13,9 +15,8 @@ public class PersisterService {
         this.repository = repository;
     }
 
-    public void savePersister(String data) {
-        System.out.println("Persister data: " + data);
-        // this.repository.save(data);
+    public Persister save(Persister persister) {
+        return repository.save(persister);
     }
 
 }

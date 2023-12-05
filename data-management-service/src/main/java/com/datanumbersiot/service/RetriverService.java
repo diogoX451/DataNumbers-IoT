@@ -1,20 +1,32 @@
 package com.datanumbersiot.service;
 
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.stereotype.Service;
 
-import com.datanumbersiot.entity.Retriver;
+import com.datanumbersiot.entity.timescale.Persister;
+import com.datanumbersiot.repository.timescale.IRetriverRepository;
 
 @Service
 public class RetriverService {
 
-    private final PersisterService persister;
+    private final IRetriverRepository repository;
 
-    public RetriverService(PersisterService persister) {
-        this.persister = persister;
+    public RetriverService(IRetriverRepository repository) {
+        this.repository = repository;
     }
 
-    public void data(String data) {
-        System.out.println("data: " + data);
-        this.persister.savePersister(data);
+    public List<Persister> findAll() {
+        return repository.findAll();
+    }
+
+    public Optional<Persister> findById(Long id) {
+        return repository.findById(id);
+    }
+
+    public List<Persister> findByTimeBetween(Instant start, Instant end) {
+        return repository.findByTimeBetween(start, end);
     }
 }
