@@ -16,8 +16,6 @@ import com.datanumbersiot.service.RetriverService;
 
 @ComponentScan(basePackages = "com.datanumbersiot")
 @EntityScan({ "com.datanumbersiot.entity", "com.datanumbersiot.entity.timescale" })
-// @EnableJpaRepositories(basePackages = {
-// "com.datanumbersiot.repository.timescale" })
 @EnablePulsar
 @SpringBootApplication
 
@@ -37,9 +35,7 @@ public class DataManagementServiceApplication {
 	@Bean
 	public CommandLineRunner testRetriveService(RetriverService retriverService) {
 		return args -> {
-			Instant start = Instant.parse("2023-12-05T02:01:25.601Z");
-			Instant end = Instant.parse("2023-12-05T02:01:45.643Z");
-			retriverService.findByTimeBetween(start, end).stream().forEach(System.out::println);
+			retriverService.findAll().forEach(System.out::println);
 		};
 	}
 }
