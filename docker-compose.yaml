@@ -15,7 +15,7 @@ services:
       - DB_DNS=host=db user=numbers password=numbers dbname=data-numbers-db port=5432 sslmode=disable TimeZone=America/Sao_Paulo
       - HOST_REDIS=redis
       - PORT_REDIS=6379
-      - PASSWORD_REDIS=""
+      - PASSWORD_REDIS=''
 
   emqx:
     image: emqx:5.3.0
@@ -42,19 +42,6 @@ services:
     volumes:
       - ./data/emqx1_data:/opt/emqx/data
 
-  dashboard:
-    image: apachepulsar/pulsar-manager:latest
-    ports:
-      - "9527:9527"
-      - "7750:7750"
-    container_name: dashboard
-    depends_on:
-      - pulsar
-    environment:
-      SPRING_CONFIGURATION_FILE: /pulsar-manager/pulsar-manager/application.properties
-    networks:
-      - data-numbers-network
-
   db:
     user: "root"
     container_name: data-numbers-db
@@ -71,24 +58,16 @@ services:
     networks:
       - data-numbers-network
 
-  pulsar:
-    image: apachepulsar/pulsar:latest
-    command: bin/pulsar standalone
-    hostname: pulsar
-    container_name: pulsar
+  nats:
+    image: nats
+    container_name: nats
     ports:
-      - "8080:8080"
-      - "6650:6650"
-    restart: always
-    volumes:
-      - "./data:/pulsar/data"
+      - "8222:8222"
+      - "4222:4222"
+      - "6222:6222"
+    command: "--cluster_name NATS --cluster nats://0.0.0.0:6222 --http_port 8222 "
     networks:
       - data-numbers-network
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 4G
 
   redis:
     container_name: 'redis'

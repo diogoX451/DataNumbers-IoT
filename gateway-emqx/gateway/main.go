@@ -6,9 +6,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/apache/pulsar-client-go/pulsar"
 	emqxConfig "github.com/gateway-emqx-datanumbers/internal/config/emqx"
-	pulsarConfig "github.com/gateway-emqx-datanumbers/internal/config/pulsar"
+	nats_service "github.com/gateway-emqx-datanumbers/internal/config/nats"
 	"github.com/gateway-emqx-datanumbers/internal/database"
 	emqxService "github.com/gateway-emqx-datanumbers/internal/service"
 	serverGrpc "github.com/gateway-emqx-datanumbers/internal/service/grpc"
@@ -18,7 +17,7 @@ import (
 )
 
 var db *database.Postgres
-var client pulsar.Client
+var nats nats_service.NatsConfig
 
 func init() {
 
@@ -35,10 +34,7 @@ func init() {
 	db.SetConnection(int32(2))
 	db.SetMinConnections(int32(2))
 
-	client = *pulsarConfig.NewPulsar().Connect()
-	if err != nil {
-		log.Fatalf("Failed to connect to Pulsar: %v", err)
-	}
+	nats = *nats_service.NewNatsConfig()
 }
 
 func main() {
@@ -49,7 +45,21 @@ func main() {
 	}
 	defer file.Close()
 
-	emqx := emqxConfig.NewEmqx(emqxService.NewServiceEmqx(client))
+	nats.SetTopic("devices-data")
+	// nats.Subscribe("", func(msg *natsService.Msg) {
+	// 	string1 := string(msg.Data)
+	// 	newString := strings.Replace(string1, "\"", "", -1)
+
+	// 	decoded, err := base64.StdEncoding.DecodeString(newString)
+	// 	if err != nil {
+	// 		log.Printf("Error decoding message: %v", err)
+	// 		return
+	// 	}
+
+	// 	log.Printf("Received message: %v", string(decoded))
+	// })
+
+	emqx := emqxConfig.NewEmqx(emqxService.NewServiceEmqx(nats.Publish))
 	emqx.Connect()
 
 	defer db.Close()
