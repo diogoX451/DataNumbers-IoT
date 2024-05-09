@@ -1,8 +1,10 @@
-package model
+package validation
 
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/xeipuuv/gojsonschema"
 )
@@ -20,12 +22,19 @@ func NewData(topic string, payload interface{}) Data {
 }
 
 func (d *Data) Validate() bool {
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error getting current working directory:", err)
+		return false
+	}
+	schemaPath := filepath.Join(cwd, "schema.json")
 	schemna := gojsonschema.NewReferenceLoader(
-		"file:///home/diogox451/Documentos/DataNumbers-IoT/gateway-emqx/internal/model/schema.json",
+		"file://" + schemaPath,
 	)
 
 	var obj interface{}
-	err := json.Unmarshal(d.Payload.([]byte), &obj)
+	err = json.Unmarshal(d.Payload.([]byte), &obj)
 	if err != nil {
 		fmt.Println(err.Error())
 	}

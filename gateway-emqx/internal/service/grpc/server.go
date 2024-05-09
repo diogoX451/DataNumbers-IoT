@@ -3,12 +3,11 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"time"
 
-	"github.com/gateway-emqx-datanumbers/internal/database"
-	"github.com/gateway-emqx-datanumbers/internal/model"
-	"github.com/gateway-emqx-datanumbers/internal/service/grpc/emqx.io/grpc/exhook"
-	"github.com/gateway-emqx-datanumbers/util"
+	"github.com/gateway-emqx/gateway-emqx/internal/database"
+	"github.com/gateway-emqx/gateway-emqx/internal/service/grpc/emqx.io/grpc/exhook"
+	"github.com/gateway-emqx/gateway-emqx/internal/validation"
+	"github.com/gateway-emqx/gateway-emqx/util"
 	"github.com/gofrs/uuid"
 )
 
@@ -121,29 +120,31 @@ func (s *Server) OnMessagePublish(ctx context.Context, in *exhook.MessagePublish
 	cnter.Count(1)
 	reply := &exhook.ValuedResponse{}
 
-	format := model.NewData(
+	format := validation.NewData(
 		in.Message.Topic,
 		in.Message.Payload,
 	)
 
 	if !format.Validate() {
-		go func(in *exhook.MessagePublishRequest) {
-			id := uuid.Must(uuid.NewV4())
-			s.db.Insert(
-				"INSERT INTO gateway.emqx_history (id, observation, type, username, topic, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
-				id,
-				"Invalid data format",
-				"error",
-				in.Message.Headers["username"],
-				in.Message.Topic,
-				time.Now().UTC().Local(),
-			)
-		}(in)
+
+		id := uuid.Must(uuid.NewV4())
+		s.db.Insert(
+			"INSERT INTO historys (id, observation, type, username, topic) VALUES ($1, $2, $3, $4, $5)",
+			id,
+			"Invalid data format",
+			"error",
+			in.Message.Headers["username"],
+			in.Message.Topic,
+		)
 		in.Message.Headers["allow_publish"] = "false"
 		in.Message.Payload = []byte("")
+		reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
+		reply.Value = &exhook.ValuedResponse_Message{Message: in.Message}
+		return reply, nil
 	}
 
 	fmt.Println("Publicou")
+	fmt.Println(in.Message.Payload)
 
 	reply.Type = exhook.ValuedResponse_STOP_AND_RETURN
 	reply.Value = &exhook.ValuedResponse_Message{Message: in.Message}
@@ -172,13 +173,12 @@ func (s *Server) OnMessageDelivered(ctx context.Context, in *exhook.MessageDeliv
 func (s *Server) OnMessageDropped(ctx context.Context, in *exhook.MessageDroppedRequest) (*exhook.EmptySuccess, error) {
 	cnter.Count(1)
 	s.db.Insert(
-		"INSERT INTO gateway.emqx_history (id, observation, type, username, topic, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+		"INSERT INTO historys (id, observation, type, username, topic) VALUES ($1, $2, $3, $4, $5)",
 		in.Message.Id,
 		"Message dropped",
 		"error",
 		in.Message.Headers["username"],
 		in.Message.Topic,
-		time.Now().UTC().Local(),
 	)
 	return &exhook.EmptySuccess{}, nil
 }

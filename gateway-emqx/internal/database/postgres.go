@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -13,7 +14,7 @@ type Postgres struct {
 	config *pgxpool.Config
 }
 
-var _ Database = &Postgres{}
+var _ Database = (*Postgres)(nil)
 
 func NewPostgres() *Postgres {
 	return &Postgres{
@@ -28,6 +29,9 @@ func (p *Postgres) Connect() error {
 		panic("Couldn't connect to database")
 	}
 	p.db = pool
+
+	fmt.Println("Connected to database")
+
 	return nil
 }
 
@@ -94,4 +98,22 @@ func (p *Postgres) Insert(query string, params ...interface{}) (interface{}, err
 	}
 
 	return results, nil
+}
+
+func (p *Postgres) TableExists(tableName string) (bool, error) {
+	query := `
+		SELECT EXISTS (
+			SELECT FROM information_schema.tables 
+			WHERE  table_name = $1
+		);
+	`
+	row := p.db.QueryRow(context.Background(), query, tableName)
+
+	var exists bool
+	err := row.Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
 }

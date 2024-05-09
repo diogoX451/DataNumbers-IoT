@@ -12,4 +12,5 @@ type Database interface {
 	Insert(query string, params ...interface{}) (interface{}, error)
 	Query(query string, params ...interface{}) (interface{}, error)
 	Close()
+	TableExists(tableName string) (bool, error)
 }

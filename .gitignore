@@ -6,3 +6,5 @@ datanumbers-iot-web/.next/
 datanumbers-iot-web/node_modules/
 gateway-emqx/.env
 gateway-emqx/app.log
+gateway-emqx/script.sh
+gateway-emqx/data/

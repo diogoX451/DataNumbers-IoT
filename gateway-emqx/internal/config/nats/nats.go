@@ -44,8 +44,6 @@ func (n *NatsConfig) Publish(client mqtt.Client, msg mqtt.Message) {
 	}
 
 	n.Connect.Publish(n.Topic, []byte(msgBytes))
-
-	log.Printf("Published message: %v", msgBytes)
 }
 
 func (n *NatsConfig) Subscribe(topic string, callback func(msg *nats.Msg)) {

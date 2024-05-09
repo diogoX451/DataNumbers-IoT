@@ -1,0 +1,57 @@
+version: '3'
+
+services:
+  emqx:
+    image: emqx:5.6.1
+    container_name: emqx
+    environment:
+      - "EMQX_NODE_NAME=emqx@node1.emqx.io"
+      - "EMQX_CLUSTER__DISCOVERY_STRATEGY=static"
+      - "EMQX_CLUSTER__STATIC__SEEDS=[emqx@node1.emqx.io,emqx@node2.emqx.io]"
+    healthcheck:
+      test: [ "CMD", "/opt/emqx/bin/emqx", "ctl", "status" ]
+      interval: 5s
+      timeout: 25s
+      retries: 5
+    networks:
+      emqx-bridge:
+        aliases:
+          - node1.emqx.io
+    ports:
+      - 1883:1883
+      - 8083:8083
+      - 8084:8084
+      - 8883:8883
+      - 18083:18083
+    volumes:
+      - ./data/emqx1_data:/opt/emqx/data
+
+  nats:
+    image: nats
+    container_name: nats
+    ports:
+      - "8222:8222"
+      - "4222:4222"
+      - "6222:6222"
+    command: "--cluster_name NATS --cluster nats://0.0.0.0:6222 --http_port 8222 "
+    networks:
+      - emqx-bridge
+
+  db:
+    container_name: gateway-emqx-db
+    image: postgres:16.2
+    restart: always
+    ports:
+      - 5432:5432
+    volumes:
+      - ./data/postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=gateway-emqx
+      - POSTGRES_PASSWORD=gateway-emqx
+      - POSTGRES_DB=gateway-emqx-db
+    networks:
+      - emqx-bridge
+
+networks:
+  emqx-bridge:
+    driver: bridge

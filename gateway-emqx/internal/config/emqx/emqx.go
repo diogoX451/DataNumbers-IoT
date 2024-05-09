@@ -4,7 +4,7 @@ import (
 	"os"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	emqxService "github.com/gateway-emqx-datanumbers/internal/service"
+	emqxService "github.com/gateway-emqx/gateway-emqx/internal/service"
 )
 
 type Emqx struct {
