@@ -16,4 +16,12 @@ func NewUserFindService(repo IUserFindRepository) *UserFindService {
 	}
 }
 
+func (service *UserFindService) GetUser(id string) (*models.User, error) {
+	user, err := service.repo.GetUser(id)
 
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
