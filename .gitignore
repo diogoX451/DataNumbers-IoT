@@ -8,3 +8,4 @@ gateway-emqx/.env
 gateway-emqx/app.log
 gateway-emqx/script.sh
 gateway-emqx/data/
+auth/data/
