@@ -74,7 +74,7 @@ const SignIn = () => {
                 width={75}
                 height={75}
               />
-              <p className="text-center fs-4 fw-bold">DataNumbERS-IOT</p>
+              <p className="text-center fs-3 fw-bold">NexSync</p>
             </div>
             {hasMounted && (
               <Form onSubmit={handleConfirm}>
