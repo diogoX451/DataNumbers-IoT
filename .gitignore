@@ -1,4 +1,3 @@
-data/*
 auth/private_key.pem
 auth/public_key.pem
 auth/.env
@@ -6,6 +5,6 @@ datanumbers-iot-web/.next/
 datanumbers-iot-web/node_modules/
 gateway-emqx/.env
 gateway-emqx/app.log
-gateway-emqx/script.sh
 gateway-emqx/data/
 auth/data/
+data_manager/.env
