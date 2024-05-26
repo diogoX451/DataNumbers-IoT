@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  db:
+    container_name: data-management-db
+    image: postgres:16.2
+    restart: always
+    ports:
+      - 5432:5432
+    volumes:
+      - ./data/postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=management
+      - POSTGRES_PASSWORD=management
+      - POSTGRES_DB=data-management-db
+    networks:
+      - data-management-network
+
+networks:
+  data-management-network:
+    driver: bridge
