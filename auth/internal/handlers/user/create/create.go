@@ -1,6 +1,7 @@
 package userHandler
 
 import (
+	"github.com/data_numbers/internal/controllers/topics"
 	usercreate "github.com/data_numbers/internal/controllers/user/user-create"
 	"github.com/gin-gonic/gin"
 )
@@ -23,12 +24,12 @@ func (handler *CreateUserHandler) CreateUser(ctx *gin.Context) {
 		return
 	}
 
-	mqttAcl := usercreate.UserMqttAclInput{
+	mqttAcl := topics.TopicsInput{
 		Ipaddr: ctx.ClientIP(),
 	}
 
 	user, err := handler.service.CreateUser(input, mqttAcl)
-	
+
 	if err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return

@@ -42,6 +42,7 @@ const (
 type MqttAcl struct {
 	gorm.Model
 	ID         uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	Name       string         `gorm:"type:string;not null"`
 	Ipaddr     string         `gorm:"type:string;not null"`
 	User_id    uuid.UUID      `gorm:"type:uuid;not null"`
 	Clientid   string         `gorm:"type:string;not null"`

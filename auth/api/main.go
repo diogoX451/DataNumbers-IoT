@@ -5,6 +5,7 @@ import (
 
 	tokenVerifyRoute "github.com/data_numbers/api/routes/token/verify"
 	checkusernameRouter "github.com/data_numbers/api/routes/user/check-username"
+	topicsRouter "github.com/data_numbers/api/routes/topics/create"
 	userCreateRoute "github.com/data_numbers/api/routes/user/create"
 	userLoginRoute "github.com/data_numbers/api/routes/user/login"
 	userUpdateRoute "github.com/data_numbers/api/routes/user/update"
@@ -47,6 +48,7 @@ func main() {
 	userUpdateRoute.InitUpdateRoutes(dbConnect, api)
 	tokenVerifyRoute.InitVerifyTokenRoutes(dbConnect, api)
 	userfindRoutes.InitUserFindRoutes(dbConnect, api)
+	topicsRouter.InitCreateTopics(dbConnect, api)
 
 	router.Run(":3000")
 }

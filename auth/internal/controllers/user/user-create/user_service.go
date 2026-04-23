@@ -3,25 +3,28 @@ package usercreate
 import (
 	"fmt"
 
+	"github.com/data_numbers/internal/controllers/topics"
 	"github.com/data_numbers/internal/models"
 )
 
 type IUserCreateService interface {
-	CreateUser(input UserCreateInput, mqttAcl UserMqttAclInput) (*models.User, error)
+	CreateUser(input UserCreateInput, mqttAcl topics.TopicsInput) (*models.User, error)
 	GetUser(id string) (*models.User, error)
 }
 
 type UserCreateService struct {
-	repo IRepository
+	repo         IRepository
+	topicService topics.ITopicsService
 }
 
-func NewService(repo IRepository) *UserCreateService {
+func NewService(repo IRepository, topicService topics.ITopicsService) *UserCreateService {
 	return &UserCreateService{
-		repo: repo,
+		repo:         repo,
+		topicService: topicService,
 	}
 }
 
-func (service *UserCreateService) CreateUser(input UserCreateInput, mqttAcl UserMqttAclInput) (*models.User, error) {
+func (service *UserCreateService) CreateUser(input UserCreateInput, mqttAcl topics.TopicsInput) (*models.User, error) {
 	user, err := service.repo.CreateUser(input)
 	if err != nil {
 		return nil, err
@@ -29,7 +32,7 @@ func (service *UserCreateService) CreateUser(input UserCreateInput, mqttAcl User
 
 	go func() {
 		mqttAcl.UserId = user.ID
-		_, err := service.repo.CreateMqttAcl(mqttAcl)
+		_, err := service.topicService.CreateMqttAcl(mqttAcl)
 		if err != nil {
 			fmt.Println(err)
 		}
