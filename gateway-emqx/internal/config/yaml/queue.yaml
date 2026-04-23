@@ -1,0 +1,3 @@
+queue:  
+  topics:
+    gateway_data: "gateway.data"
