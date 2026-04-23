@@ -40,6 +40,5 @@ func Verify() gin.HandlerFunc {
 			return
 		}
 
-		ctx.JSON(http.StatusOK, gin.H{"status": "success", "code": http.StatusOK, "message": "Token is valid"})
 	}
 }
