@@ -1,5 +1,5 @@
 # Etapa de construção com a imagem base do Golang
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24.3-alpine AS builder
 
 # Instalar OpenSSL
 RUN apk --no-cache add openssl
@@ -28,18 +28,18 @@ RUN openssl genpkey -algorithm RSA -out /auth/private_key.pem && \
     chmod 644 /auth/private_key.pem /auth/public_key.pem
 
 # Etapa final para criar uma imagem pequena
-FROM scratch
+FROM alpine:3.19
 
-# Copiar o arquivo /etc/passwd para o novo container
-COPY --from=builder /etc/passwd /etc/passwd
+RUN adduser -D aut
 
 # Mudar para o usuário não-root
 USER aut
 
 # Copiar o executável compilado e as chaves
+WORKDIR /auth
 COPY --from=builder /auth/api /auth/api
-COPY --from=builder /auth/private_key.pem /auth/api/private_key.pem
-COPY --from=builder /auth/public_key.pem /auth/api/public_key.pem
+COPY --from=builder /auth/private_key.pem /auth/private_key.pem
+COPY --from=builder /auth/public_key.pem /auth/public_key.pem
 
 # Definir o ponto de entrada para o executável
-ENTRYPOINT ["/auth/api/main"]
+ENTRYPOINT ["/auth/api"]

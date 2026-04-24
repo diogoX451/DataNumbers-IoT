@@ -2,6 +2,7 @@ package nats
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/diogoX451/gateway-broker/internal/interfaces"
 	"github.com/nats-io/nats.go"
@@ -17,7 +18,11 @@ type NatsConnect struct {
 func (n *NatsConnect) Connect() error {
 	if n.conn == nil {
 		var err error
-		n.conn, err = nats.Connect(nats.DefaultURL)
+		url := os.Getenv("NATS_URL")
+		if url == "" {
+			url = nats.DefaultURL
+		}
+		n.conn, err = nats.Connect(url)
 		if err != nil {
 			return err
 		}

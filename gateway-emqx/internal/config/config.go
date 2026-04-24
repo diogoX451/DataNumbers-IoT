@@ -29,8 +29,7 @@ func Load() error {
 
 	rootPath := fmt.Sprintf("%s/internal/config/env", currentDir)
 	if err := godotenv.Load(fmt.Sprintf("%s/.env", rootPath)); err != nil {
-		log.Printf("error loading .env file: %v", err)
-		return fmt.Errorf("error loading .env file")
+		log.Printf("env file not loaded, using process environment: %v", err)
 	}
 
 	log.Println("Configuration loaded successfully")

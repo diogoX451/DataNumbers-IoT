@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datanumbers.iot/contracts/nats/iot.telemetry.received.schema.json",
+  "title": "iot.telemetry.received",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "device_id",
+    "template_id",
+    "schema_version",
+    "topic",
+    "timestamp",
+    "payload"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "device_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "template_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "topic": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "minProperties": 1
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "default": {}
+    }
+  }
+}

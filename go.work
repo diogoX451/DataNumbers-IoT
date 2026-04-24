@@ -1,6 +1,8 @@
-go 1.21.0
+go 1.24.3
 
 use (
 	./auth
+	./data-management
+	./device-manager
 	./gateway-emqx
 )

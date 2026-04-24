@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datanumbers.iot/contracts/nats/template.event.schema.json",
+  "title": "template domain event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_type",
+    "template_id",
+    "user_id",
+    "timestamp",
+    "fields"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "template.created",
+        "template.updated",
+        "template.deleted"
+      ]
+    },
+    "template_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "user_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "type"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "float",
+              "int",
+              "string",
+              "boolean",
+              "date"
+            ]
+          },
+          "required": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    }
+  }
+}

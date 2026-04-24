@@ -85,7 +85,7 @@ void loop()
     }
 
     char msg[128];
-    snprintf(msg, sizeof(msg), "{\"topic\": \"%s\", \"payload\": [{\"temperatura\": %.2f}, {\"umidade\": %.2f}]}", topic, t, h);
+    snprintf(msg, sizeof(msg), "{\"payload\":{\"temperatura\":%.2f,\"umidade\":%.2f}}", t, h);
 
     if (client.connected() && client.publish(topic, msg))
     {

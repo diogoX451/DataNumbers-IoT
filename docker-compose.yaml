@@ -1,123 +1,176 @@
-version: '3.8'
-
 services:
-
-  auth-api:
-    container_name: auth-api
-    build:
-      context: .
-      dockerfile: Dockerfile
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: datanumbers-postgres
+    restart: unless-stopped
     ports:
-      - 3000:3000
+      - "${POSTGRES_PORT:-5433}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-numbers}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-numbers}
+      POSTGRES_DB: ${POSTGRES_DB:-data_numbers_iot}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-numbers} -d ${POSTGRES_DB:-data_numbers_iot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - data-numbers-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: datanumbers-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
     environment:
-      - DB_DNS=host=db user=numbers password=numbers dbname=data-numbers-db port=5432 sslmode=disable TimeZone=America/Sao_Paulo
-      - HOST_REDIS=redis
-      - PORT_REDIS=6379
-      - PASSWORD_REDIS=""
+      TZ: ${TZ:-America/Sao_Paulo}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - data-numbers-network
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: datanumbers-nats
+    restart: unless-stopped
+    command: ["-js", "-sd", "/data", "-m", "8222"]
+    ports:
+      - "${NATS_CLIENT_PORT:-4222}:4222"
+      - "${NATS_MONITOR_PORT:-8222}:8222"
+    volumes:
+      - nats-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - data-numbers-network
 
   emqx:
     image: emqx:5.3.0
-    container_name: emqx
+    container_name: datanumbers-emqx
+    restart: unless-stopped
     environment:
-      - "EMQX_NODE_NAME=emqx@node1.emqx.io"
-      - "EMQX_CLUSTER__DISCOVERY_STRATEGY=static"
-      - "EMQX_CLUSTER__STATIC__SEEDS=[emqx@node1.emqx.io]"
+      EMQX_NODE_NAME: emqx@node1.emqx.io
+      EMQX_CLUSTER__DISCOVERY_STRATEGY: static
+      EMQX_CLUSTER__STATIC__SEEDS: "[emqx@node1.emqx.io]"
     healthcheck:
-      test: [ "CMD", "/opt/emqx/bin/emqx", "ctl", "status" ]
+      test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
       interval: 5s
       timeout: 25s
-      retries: 5
+      retries: 10
+    ports:
+      - "${EMQX_MQTT_PORT:-1883}:1883"
+      - "${EMQX_WS_PORT:-8083}:8083"
+      - "${EMQX_WSS_PORT:-8084}:8084"
+      - "${EMQX_MQTTS_PORT:-8883}:8883"
+      - "${EMQX_DASHBOARD_PORT:-18083}:18083"
+    volumes:
+      - emqx-data:/opt/emqx/data
     networks:
       data-numbers-network:
         aliases:
           - node1.emqx.io
-    ports:
-      - 1883:1883
-      - 8083:8083
-      - 8084:8084
-      - 8883:8883
-      - 18083:18083
-    volumes:
-      - ./data/emqx1_data:/opt/emqx/data
 
-  dashboard:
-    image: apachepulsar/pulsar-manager:latest
-    ports:
-      - "9527:9527"
-      - "7750:7750"
-    container_name: dashboard
+  auth-api:
+    container_name: datanumbers-auth-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
     depends_on:
-      - pulsar
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${AUTH_API_PORT:-3000}:3000"
     environment:
-      SPRING_CONFIGURATION_FILE: /pulsar-manager/pulsar-manager/application.properties
+      DB_DNS: "host=postgres user=${POSTGRES_USER:-numbers} password=${POSTGRES_PASSWORD:-numbers} dbname=${POSTGRES_DB:-data_numbers_iot} port=5432 sslmode=disable TimeZone=${TZ:-America/Sao_Paulo}"
+      HOST_REDIS: redis
+      PORT_REDIS: 6379
+      PASSWORD_REDIS: ${REDIS_PASSWORD:-}
     networks:
       - data-numbers-network
 
-  db:
-    user: "root"
-    container_name: data-numbers-db
-    image: postgres:15
-    restart: always
+  gateway-emqx:
+    container_name: datanumbers-gateway-emqx
+    build:
+      context: ./gateway-emqx
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      emqx:
+        condition: service_healthy
     ports:
-      - 5433:5432
-    volumes:
-      - ./data/postgres-data:/var/lib/postgresql/data
+      - "${GATEWAY_HTTP_PORT:-3002}:3002"
+      - "${GATEWAY_GRPC_PORT:-5051}:5051"
     environment:
-      - POSTGRES_USER=numbers
-      - POSTGRES_PASSWORD=numbers
-      - POSTGRES_DB=data-numbers-db
+      DNS_DATABASE: "postgres://${POSTGRES_USER:-numbers}:${POSTGRES_PASSWORD:-numbers}@postgres:5432/${POSTGRES_DB:-data_numbers_iot}?sslmode=disable"
+      HOST_EMQX: emqx
+      PORT_EMQX: 1883
+      ROUTER_PORT: 3002
+      NATS_URL: nats://nats:4222
     networks:
       - data-numbers-network
 
-  pulsar:
-    image: apachepulsar/pulsar:latest
-    command: bin/pulsar standalone
-    hostname: pulsar
-    container_name: pulsar
+  device-manager:
+    container_name: datanumbers-device-manager
+    build:
+      context: ./device-manager
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
     ports:
-      - "8080:8080"
-      - "6650:6650"
-    restart: always
-    volumes:
-      - "./data:/pulsar/data"
-    networks:
-      - data-numbers-network
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 4G
-
-  redis:
-    container_name: 'redis'
-    image: redis
-    restart: always
-    ports:
-      - '6380:6379'
+      - "${DEVICE_MANAGER_PORT:-3001}:3001"
     environment:
-      TZ: 'America/Sao_Paulo'
+      DATABASE_URL: "postgres://${POSTGRES_USER:-numbers}:${POSTGRES_PASSWORD:-numbers}@postgres:5432/${POSTGRES_DB:-data_numbers_iot}?sslmode=disable"
+      NATS_URL: nats://nats:4222
+      HTTP_PORT: 3001
     networks:
       - data-numbers-network
 
-  timescaledb:
-    image: timescale/timescaledb:latest-pg14
-    restart: always
+  data-management:
+    container_name: datanumbers-data-management
+    build:
+      context: ./data-management
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
     ports:
-      - 5432:5432
+      - "${DATA_MANAGEMENT_PORT:-3003}:3003"
     environment:
-      POSTGRES_USER: numbers
-      POSTGRES_PASSWORD: numbers
-    volumes:
-      - timescaledb-volume:/var/lib/postgresql/data
+      DATABASE_URL: "postgres://${POSTGRES_USER:-numbers}:${POSTGRES_PASSWORD:-numbers}@postgres:5432/${POSTGRES_DB:-data_numbers_iot}?sslmode=disable"
+      NATS_URL: nats://nats:4222
+      NATS_TELEMETRY_SUBJECT: iot.telemetry.received
+      HTTP_PORT: 3003
     networks:
       - data-numbers-network
 
 volumes:
-  timescaledb-volume:
   postgres-data:
-
+  nats-data:
+  emqx-data:
 
 networks:
   data-numbers-network:

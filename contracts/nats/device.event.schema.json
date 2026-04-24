@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datanumbers.iot/contracts/nats/device.event.schema.json",
+  "title": "device domain event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_type",
+    "device_id",
+    "user_id",
+    "timestamp",
+    "data"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "device.created",
+        "device.updated",
+        "device.deleted"
+      ]
+    },
+    "device_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "user_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

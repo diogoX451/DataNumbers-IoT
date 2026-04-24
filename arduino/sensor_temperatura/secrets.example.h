@@ -6,7 +6,7 @@
 
 #define MQTT_BROKER "192.168.0.10"
 #define MQTT_PORT 1883
-#define MQTT_TOPIC "topic/your-device-id"
+#define MQTT_TOPIC "gateway.data/00000000-0000-0000-0000-000000000000"
 #define MQTT_USERNAME "your-mqtt-username"
 
 #endif
