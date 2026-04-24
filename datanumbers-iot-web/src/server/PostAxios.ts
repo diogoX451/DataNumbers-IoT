@@ -19,7 +19,10 @@ const usePostAxios = (url, payload, isAuth) => {
           }
         }
 
-        const response = await axios.post(url, payload, { headers });
+        const response = await axios.post(url, payload, { 
+          headers,
+          baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+        });
         setData(response.data);
       } catch (error) {
         setError(error.message);

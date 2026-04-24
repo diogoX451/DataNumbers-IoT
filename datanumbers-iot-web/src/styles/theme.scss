@@ -17,7 +17,7 @@
 @import url("https://cdnjs.cloudflare.com/ajax/libs/MaterialDesign-Webfont/7.2.96/css/materialdesignicons.min.css");
 
 // Feathers CSS for Before Icon
-@import url("/fonts/feather-icons/feather.css");
+// @import url("/fonts/feather-icons/feather.css");
 
 // Bootstrap functions
 @import "~bootstrap/scss/functions";
@@ -39,6 +39,9 @@
 
 // User
 @import "user";
+
+// Landing
+@import "landing";
 
 .heading-permalink{
     color: transparent;

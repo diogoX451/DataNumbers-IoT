@@ -1,7 +1,8 @@
 package entities
 
 type Acl struct {
-	ID         int64  `json:"id"`
+	ID         string `json:"id"`
+	TenantID   string `json:"tenant_id"`
 	Username   string `json:"username"`
 	Action     string `json:"action"`
 	Topic      string `json:"topic"`

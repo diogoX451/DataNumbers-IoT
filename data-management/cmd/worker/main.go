@@ -18,6 +18,7 @@ type telemetryMessage struct {
 	EventID       string         `json:"event_id"`
 	DeviceID      string         `json:"device_id"`
 	TemplateID    string         `json:"template_id"`
+	TenantID      string         `json:"tenant_id"`
 	SchemaVersion int            `json:"schema_version"`
 	Topic         string         `json:"topic"`
 	Timestamp     string         `json:"timestamp"`
@@ -108,6 +109,7 @@ func persistTelemetry(ctx context.Context, db *sql.DB, raw []byte) error {
 	_, err = db.ExecContext(ctx, `
 		INSERT INTO data_management.devices_data (
 			time,
+			tenant_id,
 			event_id,
 			device_id,
 			template_id,
@@ -116,8 +118,8 @@ func persistTelemetry(ctx context.Context, db *sql.DB, raw []byte) error {
 			payload,
 			metadata
 		)
-		VALUES ($1, NULLIF($2, '')::uuid, NULLIF($3, '')::uuid, NULLIF($4, '')::uuid, $5, $6, $7::jsonb, $8::jsonb)
-	`, occurredAt, input.EventID, input.DeviceID, input.TemplateID, input.SchemaVersion, input.Topic, string(payload), string(metadataBody))
+		VALUES ($1, NULLIF($2, '')::uuid, NULLIF($3, '')::uuid, NULLIF($4, '')::uuid, NULLIF($5, '')::uuid, $6, $7, $8::jsonb, $9::jsonb)
+	`, occurredAt, input.TenantID, input.EventID, input.DeviceID, input.TemplateID, input.SchemaVersion, input.Topic, string(payload), string(metadataBody))
 	return err
 }
 

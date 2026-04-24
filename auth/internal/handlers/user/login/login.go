@@ -41,7 +41,10 @@ func (handler *LoginUserHandler) LoginUser(ctx *gin.Context) {
 
 	case http.StatusOK:
 		tk := token.NewJWT()
-		hash, err := tk.GenerateToken(user.ID)
+		hash, err := tk.GenerateToken(token.TokenData{
+			UserID:   user.ID.String(),
+			TenantID: user.TenantID.String(),
+		})
 		if err != nil {
 			utils.APIResponse(ctx, "error", http.StatusInternalServerError, "Something went wrong", nil)
 			return

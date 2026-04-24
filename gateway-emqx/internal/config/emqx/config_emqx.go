@@ -1,6 +1,7 @@
 package emqx_config
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -11,15 +12,26 @@ import (
 	"github.com/diogoX451/gateway-broker/internal/config"
 	"github.com/diogoX451/gateway-broker/internal/interfaces"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/redis/go-redis/v9"
 )
 
 type EmqxConfig struct {
-	config *mqtt.ClientOptions
-	queue  interfaces.IProducer
+	config     *mqtt.ClientOptions
+	queue      interfaces.IProducer
+	aclService interfaces.IAclsService
+	redis      *redis.Client
+}
+
+func (e *EmqxConfig) SetRedis(r *redis.Client) {
+	e.redis = r
 }
 
 func (e *EmqxConfig) GetConfig() *mqtt.ClientOptions {
 	return e.config
+}
+
+func (e *EmqxConfig) SetAclService(service interfaces.IAclsService) {
+	e.aclService = service
 }
 
 func (e *EmqxConfig) SetQueue(queue interfaces.IProducer) {
@@ -33,19 +45,46 @@ func (e *EmqxConfig) SetQueue(queue interfaces.IProducer) {
 func (e *EmqxConfig) SetConfig(options *mqtt.ClientOptions) {
 	options.AutoReconnect = true
 	options.Username = "gateway"
-	options.SetClientID("gateway")
+	options.SetClientID(fmt.Sprintf("gateway-%s", newUUID()[:8]))
 	options.AddBroker(fmt.Sprintf("tcp://%s:%s", config.Get("HOST_EMQX"), config.Get("PORT_EMQX")))
 	options.OnConnect = func(client mqtt.Client) {
 		topics := config.GetYaml().Queue.Topics
+		log.Printf("Gateway connected to EMQX. Subscribing to: %s/#", topics.GatewayData)
 		client.Subscribe(topics.GatewayData+"/#", 0, func(client mqtt.Client, msg mqtt.Message) {
-			e.queue.Publish(topics.TelemetryReceived, 0, false, buildTelemetryEnvelope(msg.Topic(), msg.Payload()))
+			log.Printf("Gateway received MQTT message on topic: %s", msg.Topic())
+			envelope := e.buildTelemetryEnvelope(msg.Topic(), msg.Payload())
+			log.Printf("Gateway publishing to NATS: %s", envelope)
+			err := e.queue.Publish(topics.TelemetryReceived, 0, false, envelope)
+			if err != nil {
+				log.Printf("ERROR: Failed to publish to NATS: %v", err)
+			} else {
+				log.Printf("Successfully published telemetry to NATS topic: %s", topics.TelemetryReceived)
+			}
 		})
 	}
 
 	e.config = options
 }
 
-func buildTelemetryEnvelope(topic string, raw []byte) string {
+func (e *EmqxConfig) ListenToNatsCommands(consumer interfaces.IConsumer, client mqtt.Client) {
+	log.Println("Gateway listening for NATS commands on: iot.command.send")
+	consumer.Subscribe("iot.command.send", 0, func(topic string, payload []byte) {
+		var command map[string]any
+		if err := json.Unmarshal(payload, &command); err != nil {
+			log.Printf("Error unmarshalling NATS command: %v", err)
+			return
+		}
+		commandTopic, _ := command["command_topic"].(string)
+		payloadData, _ := json.Marshal(command["payload"])
+		if commandTopic != "" {
+			token := client.Publish(commandTopic, 0, false, payloadData)
+			token.Wait()
+			log.Printf("Forwarded command from NATS to MQTT topic: %s", commandTopic)
+		}
+	})
+}
+
+func (e *EmqxConfig) buildTelemetryEnvelope(topic string, raw []byte) string {
 	var body map[string]interface{}
 	if err := json.Unmarshal(raw, &body); err != nil {
 		body = map[string]interface{}{
@@ -62,21 +101,54 @@ func buildTelemetryEnvelope(topic string, raw []byte) string {
 
 	deviceID := stringValue(body["device_id"])
 	if deviceID == "" {
-		deviceID = topicSuffix(topic)
+		// Tentar buscar o mapeamento Tópico -> UUID no Redis
+		if e.redis != nil {
+			val, err := e.redis.Get(context.Background(), fmt.Sprintf("topic:%s", topic)).Result()
+			if err == nil {
+				deviceID = val
+			}
+		}
+		
+		// Fallback para o sufixo se não encontrar no Redis
+		if deviceID == "" {
+			deviceID = topicSuffix(topic)
+		}
 	}
 	if !isUUID(deviceID) {
 		deviceID = "00000000-0000-0000-0000-000000000000"
 	}
 
 	templateID := stringValue(body["template_id"])
+	tenantID := stringValue(body["tenant_id"])
+
+	// Enriquecimento via Redis
+	if e.redis != nil && isUUID(deviceID) && (templateID == "" || tenantID == "") {
+		val, err := e.redis.Get(context.Background(), fmt.Sprintf("device:%s", deviceID)).Result()
+		if err == nil {
+			var metadata map[string]string
+			if json.Unmarshal([]byte(val), &metadata) == nil {
+				if tenantID == "" {
+					tenantID = metadata["tenant_id"]
+				}
+				if templateID == "" {
+					templateID = metadata["template_id"]
+				}
+			}
+		}
+	}
+
 	if !isUUID(templateID) {
 		templateID = "00000000-0000-0000-0000-000000000000"
+	}
+	if !isUUID(tenantID) {
+		tenantID = "00000000-0000-0000-0000-000000000000"
 	}
 
 	envelope := map[string]interface{}{
 		"event_id":       newUUID(),
 		"device_id":      deviceID,
 		"template_id":    templateID,
+		"tenant_id":      tenantID,
 		"schema_version": 1,
 		"topic":          topic,
 		"timestamp":      time.Now().UTC().Format(time.RFC3339),

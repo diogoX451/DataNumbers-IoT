@@ -5,11 +5,14 @@ import (
 	"sync"
 
 	"github.com/diogoX451/gateway-broker/cmd/routes"
+	"github.com/diogoX451/gateway-broker/internal/app/services/stream"
 	"github.com/diogoX451/gateway-broker/internal/config"
 	"github.com/diogoX451/gateway-broker/internal/config/di"
 	emqx_config "github.com/diogoX451/gateway-broker/internal/config/emqx"
 	"github.com/diogoX451/gateway-broker/internal/infra/database"
+	mqtt_adapter "github.com/diogoX451/gateway-broker/internal/infra/transport/mqtt/adapter"
 	serverMqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/dig"
 
 	"github.com/diogoX451/gateway-broker/internal/interfaces"
@@ -42,9 +45,11 @@ func run(p struct {
 	Producer interfaces.IProducer
 	Consumer interfaces.IConsumer
 	Routes   *routes.Routes
+	Stream   *stream.StreamService
+	Redis    *redis.Client
 }) {
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(2)
 
 	conn, err := p.Db.Open()
 	if err != nil {
@@ -60,42 +65,53 @@ func run(p struct {
 
 	p.Routes.SetupRoutes(rt)
 
+	// Adicionar rota WebSocket
+	rt.GroupRoute("/api").Get("/stream", func(ctx interfaces.IContext) {
+		p.Stream.HandleWS(ctx.Writer(), ctx.Request())
+	})
+
+	// Iniciar adaptador MQTT e configurar opções
 	mq, err := p.Mqtt.Start()
 	if err != nil {
-		log.Fatalf("failed to start mqtt server: %v", err)
+		log.Fatalf("failed to start mqtt transport: %v", err)
 	}
 
-	config := emqx_config.EmqxConfig{}
-	config.SetQueue(p.Producer)
-	config.SetConfig(mq.GetOptions().(*serverMqtt.ClientOptions))
+	// Configurar MQTT
+	configMqtt := emqx_config.EmqxConfig{}
+	configMqtt.SetQueue(p.Producer)
+	configMqtt.SetAclService(p.Routes.ServiceAcl)
+	configMqtt.SetRedis(p.Redis)
 
-	mq.SetOptions(config.GetConfig())
+	opts := mq.GetOptions().(*serverMqtt.ClientOptions)
+	configMqtt.SetConfig(opts)
+	mq.SetOptions(opts)
 
-	err = p.Grpc.Run()
-	if err != nil {
-		log.Fatalf("failed to start grpc server: %v", err)
+	// Inicializar gRPC
+	if err := p.Grpc.Run(); err != nil {
+		log.Fatalf("failed to initialize grpc server: %v", err)
 	}
-
-	go func() {
-		defer wg.Done()
-		if err := p.Mqtt.Run(); err != nil {
-			log.Fatalf("failed to run mqtt server: %v", err)
-		}
-	}()
 
 	go func() {
 		defer wg.Done()
 		if _, err := p.Grpc.Start(); err != nil {
-			log.Fatalf("failed to run grpc server: %v", err)
+			log.Printf("failed to run grpc server: %v", err)
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
-		if err := p.Http.Run(); err != nil {
-			log.Fatalf("failed to run http server: %v", err)
+		if err := mq.Run(); err != nil {
+			log.Printf("failed to run mqtt client: %v", err)
+			return
+		}
+
+		if emqx, ok := mq.(*mqtt_adapter.EmqxAdapter); ok {
+			configMqtt.ListenToNatsCommands(p.Consumer, emqx.GetClient())
 		}
 	}()
 
-	wg.Wait()
+	// Servidor HTTP como processo principal (bloqueante)
+	if err := p.Http.Run(); err != nil {
+		log.Fatalf("failed to run http server: %v", err)
+	}
 }

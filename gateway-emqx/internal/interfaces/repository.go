@@ -11,4 +11,5 @@ type IHistoryRepository interface {
 
 type IAclRepository interface {
 	Create(acl *entities.Acl) error
+	FindByUsername(username string) (*entities.Acl, error)
 }

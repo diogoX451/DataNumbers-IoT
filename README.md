@@ -30,6 +30,7 @@ Serviços configurados no `docker-compose.yaml`:
 - `postgres`: banco único com TimescaleDB habilitado.
 - `redis`: apoio ao `auth-api`.
 - `nats`: broker com JetStream habilitado.
+- `nats-ui`: interface web para observar subjects e mensagens no NATS.
 - `emqx`: broker MQTT de entrada dos dispositivos.
 - `auth-api`: serviço Go de autenticação.
 - `device-manager`: serviço Go de templates e dispositivos.
@@ -50,6 +51,12 @@ MQTT gateway.data/<device_uuid>
   -> data_management.devices_data
 ```
 
+Monitoramento local de mensageria:
+
+- NATS monitoring endpoint: `http://localhost:${NATS_MONITOR_PORT:-8222}`
+- NATS UI: `http://localhost:${NATS_UI_PORT:-3131}`
+- Credenciais padrão da NATS UI: `admin` / `admin123` (ajuste no `.env`)
+
 O dispositivo publica apenas o `payload` dinâmico. O `gateway-emqx` adiciona o envelope com `event_id`, `device_id`, `template_id`, `schema_version`, `topic`, `timestamp` e `metadata`.
 
 ## Serviços Go
@@ -68,6 +75,9 @@ Portas padrão:
 - `gateway-emqx` HTTP: `3002`
 - `data-management`: `3003`
 - `gateway-emqx` gRPC exhook: `5051`
+- `nats` client: `4222`
+- `nats` monitor: `8222`
+- `nats-ui`: `3131`
 
 Para configurar portas e credenciais locais:
 

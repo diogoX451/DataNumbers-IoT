@@ -7,9 +7,6 @@ RUN apk --no-cache add openssl
 # Definir o diretório de trabalho no container
 WORKDIR /auth
 
-# Adicionar um usuário não-root
-RUN adduser -D aut
-
 # Copiar os arquivos go.mod e go.sum para o container
 COPY auth/go.mod auth/go.sum ./
 
@@ -20,26 +17,30 @@ RUN go mod download
 COPY auth/ .
 
 # Compilar o código fonte
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags '-w -extldflags "-static"' -o api api/main.go && \
-    chmod +x api
-
-RUN openssl genpkey -algorithm RSA -out /auth/private_key.pem && \
-    openssl rsa -pubout -in /auth/private_key.pem -out /auth/public_key.pem && \
-    chmod 644 /auth/private_key.pem /auth/public_key.pem
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags '-w -extldflags "-static"' -o auth-api api/main.go && \
+    chmod +x auth-api
 
 # Etapa final para criar uma imagem pequena
 FROM alpine:3.19
 
-RUN adduser -D aut
+RUN apk --no-cache add openssl && \
+    adduser -D aut
+
+WORKDIR /auth
+
+# Copiar o executável compilado
+COPY --from=builder /auth/auth-api /auth/auth-api
+
+# Garantir diretório de certs e gerar chaves iniciais
+RUN mkdir -p /auth/certs && \
+    openssl genpkey -algorithm RSA -out /auth/certs/private_key.pem && \
+    openssl rsa -pubout -in /auth/certs/private_key.pem -out /auth/certs/public_key.pem && \
+    chmod 644 /auth/certs/private_key.pem /auth/certs/public_key.pem && \
+    chown -R aut:aut /auth/ && \
+    chown -R aut:aut /auth/certs
 
 # Mudar para o usuário não-root
 USER aut
 
-# Copiar o executável compilado e as chaves
-WORKDIR /auth
-COPY --from=builder /auth/api /auth/api
-COPY --from=builder /auth/private_key.pem /auth/private_key.pem
-COPY --from=builder /auth/public_key.pem /auth/public_key.pem
-
 # Definir o ponto de entrada para o executável
-ENTRYPOINT ["/auth/api"]
+ENTRYPOINT ["/auth/auth-api"]

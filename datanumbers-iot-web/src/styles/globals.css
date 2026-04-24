@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary: 262.1 83.3% 57.8%; /* Purple */
+    --primary-foreground: 210 40% 98%;
+    
+    --sidebar-bg: 222.2 47.4% 11.2%;
+    --sidebar-active: 262.1 83.3% 57.8%;
+    
+    --iot-banner: 243.4 75.4% 58.6%; /* Blue/Purple from image */
+  }
+}
+
+body {
+  @apply bg-[#f1f5f9] text-slate-900;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Modern IoT Styles based on image */
+.iot-banner-header {
+  @apply bg-[#5c56e3] pt-12 pb-24 px-8 rounded-none -mb-16 flex justify-between items-start text-white;
+}
+
+.iot-card-main {
+  @apply bg-white rounded-xl shadow-xl border-0 overflow-hidden mx-8;
+}
+
+.iot-table-header {
+  @apply bg-white border-b border-slate-100 py-6 px-8;
+}
+
+.iot-badge-id {
+  @apply bg-[#eef2ff] text-[#5c56e3] px-3 py-1 rounded-lg text-xs font-medium border border-[#e0e7ff];
+}
+
+.iot-status-pill {
+  @apply bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-slate-200 flex items-center gap-2;
+}
+
+.iot-status-online {
+  @apply bg-emerald-50 text-emerald-600 border-emerald-100;
+}
+
+.iot-btn-outline {
+  @apply border border-[#5c56e3] text-[#5c56e3] hover:bg-[#f5f3ff] transition-all px-4 py-1.5 rounded-lg text-sm font-bold;
+}
+
+.iot-btn-solid {
+  @apply bg-[#5c56e3] text-white hover:bg-[#4a44cc] transition-all px-4 py-1.5 rounded-lg text-sm font-bold shadow-lg shadow-indigo-100;
+}
+
+.sidebar-item-active {
+  @apply bg-[#6d5dfc] text-white shadow-lg shadow-indigo-500/30;
+}

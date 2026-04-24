@@ -14,11 +14,6 @@ import (
 var yamlFile *yamlConfig.Yaml
 
 func Load() error {
-	logFile, err := os.OpenFile("app.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		return fmt.Errorf("error opening log file: %v", err)
-	}
-	log.SetOutput(logFile)
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	currentDir, err := os.Getwd()
@@ -28,9 +23,7 @@ func Load() error {
 	}
 
 	rootPath := fmt.Sprintf("%s/internal/config/env", currentDir)
-	if err := godotenv.Load(fmt.Sprintf("%s/.env", rootPath)); err != nil {
-		log.Printf("env file not loaded, using process environment: %v", err)
-	}
+	_ = godotenv.Load(fmt.Sprintf("%s/.env", rootPath))
 
 	log.Println("Configuration loaded successfully")
 	return nil

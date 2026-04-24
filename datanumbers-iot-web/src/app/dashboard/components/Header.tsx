@@ -1,4 +1,4 @@
-"use-client";
+"use client";
 
 import Link from "next/link";
 import { Form, Nav, Navbar } from "react-bootstrap";
@@ -8,7 +8,7 @@ import MenuUser from "../layouts/MenuUser";
 const Header = (props) => {
   return (
     <>
-      <Navbar expanded="lg" className="navbar-classic navbar navbar-expand-lg">
+      <Navbar expand="lg" className="navbar-classic navbar navbar-expand-lg">
         <div className="d-flex justify-content-between w-100">
           <div className="d-flex align-items-center">
             <Link

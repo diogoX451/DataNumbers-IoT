@@ -11,6 +11,7 @@ import (
 
 type User struct {
 	ID        uuid.UUID `gorm:"column:id;type:uuid;primary_key;default:gen_random_uuid()"`
+	TenantID  uuid.UUID `gorm:"column:tenant_id;type:uuid;not null"`
 	Name      string    `gorm:"column:name;unique;not null"`
 	Email     string    `gorm:"column:email;unique;not null"`
 	Password  string    `gorm:"column:password;not null" json:"-"`
@@ -21,13 +22,15 @@ type User struct {
 
 func (entity *User) BeforeCreate(db *gorm.DB) error {
 	entity.Password = utils.HashPassword(entity.Password)
-	entity.CreatedAt = time.Now().UTC().Local()
+	entity.CreatedAt = time.Now().UTC()
 	return nil
 }
 
 func (entity *User) BeforeUpdate(db *gorm.DB) error {
-	entity.Password = utils.HashPassword(entity.Password)
-	entity.UpdatedAt = time.Now().UTC().Local()
+	if db.Statement.Changed("password") {
+		entity.Password = utils.HashPassword(entity.Password)
+	}
+	entity.UpdatedAt = time.Now().UTC()
 	return nil
 }
 

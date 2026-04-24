@@ -4,7 +4,7 @@ services:
     container_name: datanumbers-postgres
     restart: unless-stopped
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-numbers}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-numbers}
@@ -54,6 +54,30 @@ services:
     networks:
       - data-numbers-network
 
+  nats-ui:
+    image: klinux/nats-ui:latest
+    container_name: datanumbers-nats-ui
+    restart: unless-stopped
+    depends_on:
+      nats:
+        condition: service_healthy
+    ports:
+      - "${NATS_UI_PORT:-3131}:8080"
+    environment:
+      NATS_URL: nats://nats:4222
+      BASE_URL: "http://localhost:${NATS_UI_PORT:-3131}"
+      PORT: 8080
+      ADMIN_USER: ${NATS_UI_ADMIN_USER:-admin}
+      ADMIN_PASS: ${NATS_UI_ADMIN_PASS:-admin123}
+      JWT_SECRET: ${NATS_UI_JWT_SECRET:-change-me-local}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - data-numbers-network
+
   emqx:
     image: emqx:5.3.0
     container_name: datanumbers-emqx
@@ -62,6 +86,9 @@ services:
       EMQX_NODE_NAME: emqx@node1.emqx.io
       EMQX_CLUSTER__DISCOVERY_STRATEGY: static
       EMQX_CLUSTER__STATIC__SEEDS: "[emqx@node1.emqx.io]"
+      EMQX_ALLOW_ANONYMOUS: "true"
+      EMQX_AUTHORIZATION__NO_MATCH: "allow"
+      EMQX_AUTHORIZATION__CACHE__ENABLE: "false"
     healthcheck:
       test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
       interval: 5s
@@ -93,11 +120,15 @@ services:
         condition: service_healthy
     ports:
       - "${AUTH_API_PORT:-3000}:3000"
+    volumes:
+      - certs-data:/auth/certs
     environment:
       DB_DNS: "host=postgres user=${POSTGRES_USER:-numbers} password=${POSTGRES_PASSWORD:-numbers} dbname=${POSTGRES_DB:-data_numbers_iot} port=5432 sslmode=disable TimeZone=${TZ:-America/Sao_Paulo}"
       HOST_REDIS: redis
       PORT_REDIS: 6379
       PASSWORD_REDIS: ${REDIS_PASSWORD:-}
+      JWT_PRIVATE_KEY_PATH: /auth/certs/private_key.pem
+      JWT_PUBLIC_KEY_PATH: /auth/certs/public_key.pem
     networks:
       - data-numbers-network
 
@@ -139,10 +170,13 @@ services:
         condition: service_healthy
     ports:
       - "${DEVICE_MANAGER_PORT:-3001}:3001"
+    volumes:
+      - certs-data:/app/certs:ro
     environment:
       DATABASE_URL: "postgres://${POSTGRES_USER:-numbers}:${POSTGRES_PASSWORD:-numbers}@postgres:5432/${POSTGRES_DB:-data_numbers_iot}?sslmode=disable"
       NATS_URL: nats://nats:4222
       HTTP_PORT: 3001
+      JWT_PUBLIC_KEY_PATH: /app/certs/public_key.pem
     networks:
       - data-numbers-network
 
@@ -167,10 +201,51 @@ services:
     networks:
       - data-numbers-network
 
+  rule-engine:
+    container_name: datanumbers-rule-engine
+    build:
+      context: ./rule-engine
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    ports:
+      - "${RULE_ENGINE_PORT:-3004}:3004"
+    volumes:
+      - certs-data:/app/certs:ro
+    environment:
+      DATABASE_URL: "postgres://${POSTGRES_USER:-numbers}:${POSTGRES_PASSWORD:-numbers}@postgres:5432/${POSTGRES_DB:-data_numbers_iot}?sslmode=disable"
+      NATS_URL: nats://nats:4222
+      HTTP_PORT: 3004
+      JWT_PUBLIC_KEY_PATH: /app/certs/public_key.pem
+    networks:
+      - data-numbers-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: datanumbers-api-gateway
+    restart: unless-stopped
+    ports:
+      - "${API_GATEWAY_PORT:-8080}:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth-api
+      - device-manager
+      - gateway-emqx
+      - data-management
+      - rule-engine
+    networks:
+      - data-numbers-network
+
 volumes:
   postgres-data:
   nats-data:
   emqx-data:
+  certs-data:
 
 networks:
   data-numbers-network:

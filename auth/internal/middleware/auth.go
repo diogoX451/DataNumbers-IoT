@@ -48,7 +48,8 @@ func Auth() gin.HandlerFunc {
 			return
 		}
 
-		ctx.Set("userId", claims)
+		ctx.Set("userId", claims.UserID)
+		ctx.Set("tenantId", claims.TenantID)
 		ctx.Next()
 	}
 }

@@ -1,6 +1,10 @@
 package interfaces
 
-import "github.com/diogoX451/gateway-broker/internal/infra/transport/grpc/adapter/exhook"
+import (
+	"net/http"
+
+	"github.com/diogoX451/gateway-broker/internal/infra/transport/grpc/adapter/exhook"
+)
 
 const (
 	SUCCESS        = 200
@@ -40,6 +44,8 @@ type IContext interface {
 	Param(key string) string
 	BindJSON(obj interface{}) error
 	JSON(code int, obj interface{})
+	Writer() http.ResponseWriter
+	Request() *http.Request
 }
 
 type IHookProviderServer interface {

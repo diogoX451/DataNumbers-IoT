@@ -21,7 +21,16 @@ func NewRepository(db *gorm.DB) *Repository {
 }
 
 func (repo *Repository) CreateUser(input UserCreateInput) (*models.User, error) {
+	tenant := models.Tenant{
+		Name: input.CompanyName,
+	}
+
+	if err := repo.db.Create(&tenant).Error; err != nil {
+		return nil, err
+	}
+
 	user := models.User{
+		TenantID: tenant.ID,
 		Name:     input.Name,
 		Email:    input.Email,
 		Password: input.Password,

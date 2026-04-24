@@ -4,7 +4,6 @@ import { Row, Col, Card, Form, Button, Image } from "react-bootstrap";
 import Link from "next/link";
 import useMounted from "../../../../hooks/useMounted";
 import useAxios from "axios-hooks";
-import { cookies } from "next/dist/client/components/headers";
 import { setCookie } from "nookies";
 
 interface SignInProps {
@@ -19,12 +18,11 @@ interface Response {
 const SignIn = () => {
   const [{ data, loading, error }, execute] = useAxios(
     {
-      baseURL: "http://localhost:3000",
-      url: "/auth/login",
+      baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080",
+      url: "/api/auth/user/login",
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
       },
     },
     { manual: true }

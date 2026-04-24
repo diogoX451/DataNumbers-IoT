@@ -14,17 +14,17 @@ interface UserProps {
   username: string;
   password: string;
   confirmPassword: string;
+  company_name: string;
 }
 
 const SignUp = () => {
   const hasMounted = useMounted();
 
   const [{ data, loading, error }, execute] = useAxios({
-    baseURL: "http://localhost:3000",
+    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080",
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
     },
   });
 
@@ -47,7 +47,7 @@ const SignUp = () => {
     if (username === "") return;
     try {
       const response = await execute({
-        url: "/auth/check-username",
+        url: "/api/auth/user/check-username",
         data: {
           username: username,
         },
@@ -78,29 +78,32 @@ const SignUp = () => {
 
   const handleConfirm = async (event) => {
     event.preventDefault();
-    const target = event.target as typeof event.target & UserProps;
+    const target = event.target as typeof event.target & any;
     const name = target.name.value;
     const email = target.email.value;
     const username = target.username.value;
     const password = target.password.value;
+    const company_name = target.company_name.value;
 
-    await Save(name, email, username, password);
+    await Save(name, email, username, password, company_name);
   };
 
   const Save = async (
     name: string,
     email: string,
     username: string,
-    password: string
+    password: string,
+    company_name: string
   ) => {
     try {
       const response = await execute({
-        url: "/auth/register-user",
+        url: "/api/auth/user/register-user",
         data: {
           name: name,
           email: email,
           username: username,
           password: password,
+          company_name: company_name,
         },
       });
 
@@ -153,6 +156,16 @@ const SignUp = () => {
             </div>
             {hasMounted && (
               <Form onSubmit={handleConfirm}>
+                <Form.Group className="mb-3" controlId="company_name">
+                  <Form.Label>Nome da Empresa (Tenant)</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="company_name"
+                    placeholder="Coloque o nome da sua empresa aqui"
+                    required={true}
+                  />
+                </Form.Group>
+
                 <Form.Group className="mb-3" controlId="name">
                   <Form.Label>Nome Completo</Form.Label>
                   <Form.Control
@@ -169,6 +182,16 @@ const SignUp = () => {
                     type="text"
                     name="email"
                     placeholder="Coloque seu e-mail aqui"
+                    required={true}
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3" controlId="company_name">
+                  <Form.Label>Nome da Empresa</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="company_name"
+                    placeholder="Nome da sua organização"
                     required={true}
                   />
                 </Form.Group>

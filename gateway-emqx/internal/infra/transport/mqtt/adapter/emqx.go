@@ -42,10 +42,16 @@ func (e *EmqxAdapter) GroupRoute(path string, fn ...func(interfaces.IGroupRoute)
 }
 
 func (e *EmqxAdapter) GetOptions() interface{} {
-	return mqtt.NewClientOptions()
+	if e.options == nil {
+		e.options = mqtt.NewClientOptions()
+	}
+	return e.options
 }
 
 func (e *EmqxAdapter) Run() error {
+	if e.options == nil {
+		e.options = mqtt.NewClientOptions()
+	}
 	start := mqtt.NewClient(e.options)
 	if token := start.Connect(); token.Wait() && token.Error() != nil {
 		return token.Error()
@@ -53,4 +59,8 @@ func (e *EmqxAdapter) Run() error {
 
 	e.client = start
 	return nil
+}
+
+func (e *EmqxAdapter) GetClient() mqtt.Client {
+	return e.client
 }

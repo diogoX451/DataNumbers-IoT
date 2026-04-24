@@ -1,4 +1,4 @@
-"use-client";
+"use client";
 
 import { Fragment, useEffect, useState } from "react";
 import { Dropdown, Image, ListGroup } from "react-bootstrap";
@@ -15,7 +15,7 @@ const MenuUser = () => {
     query: "(min-width: 1224px)",
   });
 
-  const { data, error, loaded } = useGetAxios("/auth/find-user", true);
+  const { data, error, loaded } = useGetAxios<any>("/api/auth/user/find-user", true);
 
   useEffect(() => {
     if (loaded && !error && data) {

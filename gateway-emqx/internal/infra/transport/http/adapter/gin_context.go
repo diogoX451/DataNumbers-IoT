@@ -1,6 +1,8 @@
 package adapter
 
 import (
+	"net/http"
+
 	"github.com/diogoX451/gateway-broker/internal/interfaces"
 	"github.com/gin-gonic/gin"
 )
@@ -25,4 +27,12 @@ func (g *GinContextAdapter) BindJSON(obj interface{}) error {
 
 func (g *GinContextAdapter) Param(key string) string {
 	return g.ctx.Param(key)
+}
+
+func (g *GinContextAdapter) Writer() http.ResponseWriter {
+	return g.ctx.Writer
+}
+
+func (g *GinContextAdapter) Request() *http.Request {
+	return g.ctx.Request
 }

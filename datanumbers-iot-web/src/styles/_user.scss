@@ -1,4 +1,157 @@
-// 
-// user.scss
-// Use this to write your custom SCSS
 //
+// user.scss
+//
+
+.navbar-vertical {
+  background-color: $iot-bg !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.2);
+
+  .navbar-brand {
+    padding: 2rem 1.5rem;
+    display: flex;
+    align-items: center;
+    
+    img {
+      filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.5));
+    }
+  }
+
+  .nav-link {
+    color: $sidebar-color !important;
+    padding: 0.8rem 1.5rem !important;
+    font-weight: 500;
+    margin: 0.2rem 0.8rem;
+    border-radius: 0.5rem;
+    transition: $transition-base;
+
+    i {
+      font-size: 1.1rem;
+      opacity: 0.7;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff !important;
+      
+      i {
+        opacity: 1;
+        color: $iot-blue;
+      }
+    }
+
+    &.active {
+      background: rgba(14, 165, 233, 0.1) !important;
+      color: $iot-blue !important;
+      box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.2);
+
+      i {
+        opacity: 1;
+        color: $iot-blue;
+      }
+    }
+  }
+
+  .navbar-heading {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 1.5rem 1.5rem 0.5rem;
+    font-weight: 700;
+  }
+}
+
+// Stats Cards
+.stat-card {
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(0,0,0,0.05);
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+  }
+  
+  &.primary::before { background: $primary; }
+  &.success::before { background: $success; }
+  &.info::before { background: $info; }
+  &.warning::before { background: $warning; }
+}
+
+// Glassmorphism effect for headers
+.bg-glass {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+// Animations
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+// Pulse effect for online status
+.pulse-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  position: relative;
+  
+  &.bg-white {
+    box-shadow: 0 0 0 rgba(255, 255, 255, 0.7);
+    animation: pulse-white 2s infinite;
+  }
+}
+
+@keyframes pulse-white {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
+// Background gradient for page headers
+.bg-primary {
+  background: linear-gradient(135deg, $primary-dark 0%, $primary 100%) !important;
+}
+
+// Layout adjustments
+#page-content {
+  background-color: #f8f9fc;
+  min-height: 100vh;
+}
+
+.container-fluid {
+  max-width: 1600px;
+}
+
+// Custom Scrollbar
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}

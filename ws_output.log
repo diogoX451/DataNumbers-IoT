@@ -1,0 +1,2 @@
+2026/04/24 14:38:05 Connected to WebSocket at ws://localhost:8080/api/stream
+2026/04/24 14:38:08 RECEIVED: {"device_id":"32bf9e4c-5e84-44c2-b9fc-3daa6e24997b","event_id":"b8cd586d-7555-4dbf-93ee-37056b1e041b","metadata":{"source":"emqx"},"payload":{"lat":-23.5,"long":-46.6,"status":"WS-READY"},"schema_version":1,"template_id":"00000000-0000-0000-0000-000000000000","tenant_id":"00000000-0000-0000-0000-000000000000","timestamp":"2026-04-24T17:38:08Z","topic":"gateway.data/32bf9e4c-5e84-44c2-b9fc-3daa6e24997b"}

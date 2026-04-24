@@ -5,10 +5,12 @@ import (
 	acls_service "github.com/diogoX451/gateway-broker/internal/app/services/acls"
 	grpc_service "github.com/diogoX451/gateway-broker/internal/app/services/grpc"
 	historys_service "github.com/diogoX451/gateway-broker/internal/app/services/historys"
+	"github.com/diogoX451/gateway-broker/internal/app/services/stream"
 	"github.com/diogoX451/gateway-broker/internal/infra/database"
 	"github.com/diogoX451/gateway-broker/internal/infra/database/adapter"
 	"github.com/diogoX451/gateway-broker/internal/infra/database/repository"
 	"github.com/diogoX451/gateway-broker/internal/infra/messaging/nats"
+	"github.com/redis/go-redis/v9"
 	grpc_transport "github.com/diogoX451/gateway-broker/internal/infra/transport/grpc"
 	grpc_adapter "github.com/diogoX451/gateway-broker/internal/infra/transport/grpc/adapter"
 	"github.com/diogoX451/gateway-broker/internal/infra/transport/http"
@@ -28,6 +30,7 @@ func BuildContainer() *dig.Container {
 	container.Provide(newNatsConnection)
 	container.Provide(newNatsProducer)
 	container.Provide(newNatsConsumer)
+	container.Provide(newRedisClient)
 
 	container.Provide(newHTTPConnection, dig.Name("httpConn"))
 	container.Provide(newMqttConnection, dig.Name("mqttConn"))
@@ -46,9 +49,17 @@ func BuildContainer() *dig.Container {
 	container.Provide(newAclRepository)
 	container.Provide(newAclService)
 
+	container.Provide(newStreamService)
+
 	container.Provide(newRouter)
 
 	return container
+}
+
+func newStreamService(conn interfaces.IConnMessage) *stream.StreamService {
+	// Garantir conexão antes de passar
+	conn.Connect()
+	return stream.NewStreamService(conn.(*nats.NatsConnect).GetConn())
 }
 
 func newDatabaseConnection() interfaces.IConn {
@@ -69,6 +80,12 @@ func newNatsProducer(conn interfaces.IConnMessage) interfaces.IProducer {
 
 func newNatsConsumer(conn interfaces.IConnMessage) interfaces.IConsumer {
 	return &nats.NatsConsumer{Conn: conn}
+}
+
+func newRedisClient() *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr: "redis:6379",
+	})
 }
 
 func newHTTPConnection() interfaces.ITransportConn {
@@ -118,9 +135,11 @@ func newServiceHistory(repo interfaces.IHistoryRepository) interfaces.IHistorySe
 	}
 }
 
-func newGrpcService(service interfaces.IHistoryService) interfaces.IHookProviderServer {
+func newGrpcService(historyService interfaces.IHistoryService, aclService interfaces.IAclsService, db interfaces.IConn) interfaces.IHookProviderServer {
 	return &grpc_service.GrpcService{
-		Service: service,
+		HistoryService: historyService,
+		AclService:     aclService,
+		Db:             db,
 	}
 }
 

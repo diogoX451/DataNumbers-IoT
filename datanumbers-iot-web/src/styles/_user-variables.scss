@@ -1,7 +1,39 @@
 //
 // user-variables.scss
-// Use this to overwrite Bootstrap and Dashui variables
 //
-// Example of a variable override to change Dashui primary color
-// Remove the "//" to comment it in and see it in action!
-// $primary: #000;
+
+// Color Overrides
+$primary: #4e73df;
+$primary-dark: #2e59d9;
+$secondary: #858796;
+$success: #1cc88a;
+$info: #36b9cc;
+$warning: #f6c23e;
+$danger: #e74a3b;
+$light: #f8f9fc;
+$dark: #5a5c69;
+
+// Custom Colors for IoT
+$iot-blue: #0ea5e9;
+$iot-bg: #0f172a;
+$iot-card-bg: #1e293b;
+
+// Typography
+$font-family-sans-serif: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+// Components
+$card-border-radius: 0.75rem;
+$card-border-width: 0;
+$card-box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+
+$btn-border-radius: 0.5rem;
+$btn-padding-y: 0.5rem;
+$btn-padding-x: 1rem;
+
+// Sidebar
+$sidebar-width: 250px;
+$sidebar-bg: $iot-bg;
+$sidebar-color: #94a3b8;
+
+// Animations
+$transition-base: all .2s ease-in-out;

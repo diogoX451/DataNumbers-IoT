@@ -1,6 +1,7 @@
 "use client";
 
 import "../styles/theme.scss";
+import "../styles/globals.css";
 
 export default function RootLayout({ children }) {
   return (

@@ -2,8 +2,8 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import cookieCutter from 'cookie-cutter'; 
 
-const useGetAxios = (url: string, isAuth: boolean) => {
-  const [data, setData] = useState<object | null>(null);
+const useGetAxios = <T = any>(url: string, isAuth: boolean) => {
+  const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string>("");
   const [loaded, setLoaded] = useState<boolean>(false);
 
@@ -21,7 +21,11 @@ const useGetAxios = (url: string, isAuth: boolean) => {
           }
         }
 
-        const response = await axios.get(url, { headers, cancelToken: cancelTokenSource.token, baseURL: 'http://localhost:3000' });
+        const response = await axios.get(url, { 
+          headers, 
+          cancelToken: cancelTokenSource.token, 
+          baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080' 
+        });
         setData(response.data);
       } catch (err) {
         if (!axios.isCancel(err)) {

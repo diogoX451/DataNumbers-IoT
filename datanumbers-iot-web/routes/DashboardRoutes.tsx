@@ -26,16 +26,83 @@ import { v4 as uuid } from "uuid";
 export const DashboardMenu = [
   {
     id: uuid(),
-    title: "Dashboard",
+    title: "Overview",
     icon: "home",
     link: "/dashboard",
   },
   {
     id: uuid(),
-    title: "LAYOUTS & PAGES",
+    title: "DISPOSITIVOS",
     grouptitle: true,
   },
   {
+    id: uuid(),
+    title: "Meus Dispositivos",
+    icon: "monitor",
+    children: [
+      { id: uuid(), link: "/dashboard/devices", name: "Listar Todos" },
+      { id: uuid(), link: "/dashboard/devices/add", name: "Novo Dispositivo" },
+    ],
+  },
+  {
+    id: uuid(),
+    title: "Modelos (Templates)",
+    icon: "layers",
+    children: [
+      { id: uuid(), link: "/dashboard/templates", name: "Ver Modelos" },
+      { id: uuid(), link: "/dashboard/templates/add", name: "Criar Modelo" },
+    ],
+  },
+  {
+    id: uuid(),
+    title: "AUTOMAÇÃO",
+    grouptitle: true,
+  },
+  {
+    id: uuid(),
+    title: "Cenários (Edges)",
+    icon: "map",
+    link: "/dashboard/automation/scenarios",
+  },
+  {
+    id: uuid(),
+    title: "Regras de Ação",
+    icon: "zap",
+    children: [
+      { id: uuid(), link: "/dashboard/automation/rules", name: "Listar Regras" },
+      { id: uuid(), link: "/dashboard/automation/rules/add", name: "Nova Regra" },
+    ],
+  },
+  {
+    id: uuid(),
+    title: "MONITORAMENTO",
+    grouptitle: true,
+  },
+  {
+    id: uuid(),
+    title: "Live Stream",
+    icon: "activity",
+    link: "/dashboard/monitoring",
+  },
+  {
+    id: uuid(),
+    title: "SISTEMA",
+    grouptitle: true,
+  },
+  {
+    id: uuid(),
+    title: "Perfil",
+    icon: "user",
+    link: "/pages/profile",
+  },
+  {
+    id: uuid(),
+    title: "Configurações",
+    icon: "settings",
+    link: "/pages/settings",
+  },
+];
+
     id: uuid(),
     title: "Pages",
     icon: "layers",
