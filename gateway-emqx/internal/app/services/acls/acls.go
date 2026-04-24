@@ -1,9 +1,9 @@
 package acls_service
 
 import (
-	"github.com/nextsync/gateway-broker/internal/domain/dto"
-	"github.com/nextsync/gateway-broker/internal/domain/entities"
-	"github.com/nextsync/gateway-broker/internal/interfaces"
+	"github.com/diogoX451/gateway-broker/internal/domain/dto"
+	"github.com/diogoX451/gateway-broker/internal/domain/entities"
+	"github.com/diogoX451/gateway-broker/internal/interfaces"
 )
 
 type AclService struct {

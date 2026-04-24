@@ -1,8 +1,8 @@
 package adapter
 
 import (
+	"github.com/diogoX451/gateway-broker/internal/interfaces"
 	"github.com/gin-gonic/gin"
-	"github.com/nextsync/gateway-broker/internal/interfaces"
 )
 
 var _ interfaces.IGroupRoute = (*GinGroupAdapter)(nil)

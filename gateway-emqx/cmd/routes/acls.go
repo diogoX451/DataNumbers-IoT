@@ -3,8 +3,8 @@ package routes
 import (
 	"log"
 
-	"github.com/nextsync/gateway-broker/internal/domain/dto"
-	"github.com/nextsync/gateway-broker/internal/interfaces"
+	"github.com/diogoX451/gateway-broker/internal/domain/dto"
+	"github.com/diogoX451/gateway-broker/internal/interfaces"
 )
 
 func routerAcl(group interfaces.IGroupRoute, service interfaces.IAclsService) {

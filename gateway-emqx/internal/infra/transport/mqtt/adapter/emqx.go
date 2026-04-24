@@ -3,9 +3,9 @@ package mqtt_adapter
 import (
 	"fmt"
 
+	"github.com/diogoX451/gateway-broker/internal/config"
+	"github.com/diogoX451/gateway-broker/internal/interfaces"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/nextsync/gateway-broker/internal/config"
-	"github.com/nextsync/gateway-broker/internal/interfaces"
 )
 
 var _ interfaces.ITransportConn = (*EmqxAdapter)(nil)

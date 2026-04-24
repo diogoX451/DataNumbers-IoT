@@ -1,8 +1,8 @@
 package interfaces
 
 import (
-	"github.com/nextsync/gateway-broker/internal/domain/dto"
-	"github.com/nextsync/gateway-broker/internal/domain/entities"
+	"github.com/diogoX451/gateway-broker/internal/domain/dto"
+	"github.com/diogoX451/gateway-broker/internal/domain/entities"
 )
 
 type IAclsService interface {

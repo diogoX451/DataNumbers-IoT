@@ -4,11 +4,11 @@ import (
 	"context"
 	"log"
 
-	"github.com/nextsync/gateway-broker/internal/app/util"
-	"github.com/nextsync/gateway-broker/internal/domain/entities"
-	"github.com/nextsync/gateway-broker/internal/infra/transport/grpc/adapter/exhook"
-	"github.com/nextsync/gateway-broker/internal/infra/transport/grpc/adapter/validation"
-	"github.com/nextsync/gateway-broker/internal/interfaces"
+	"github.com/diogoX451/gateway-broker/internal/app/util"
+	"github.com/diogoX451/gateway-broker/internal/domain/entities"
+	"github.com/diogoX451/gateway-broker/internal/infra/transport/grpc/adapter/exhook"
+	"github.com/diogoX451/gateway-broker/internal/infra/transport/grpc/adapter/validation"
+	"github.com/diogoX451/gateway-broker/internal/interfaces"
 )
 
 type GrpcService struct {

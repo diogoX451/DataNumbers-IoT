@@ -3,7 +3,7 @@ package nats
 import (
 	"fmt"
 
-	"github.com/nextsync/gateway-broker/internal/interfaces"
+	"github.com/diogoX451/gateway-broker/internal/interfaces"
 )
 
 var _ interfaces.IProducer = (*NatsProducer)(nil)

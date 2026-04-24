@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/nextsync/gateway-broker/internal/infra/transport/grpc/adapter/exhook"
-	"github.com/nextsync/gateway-broker/internal/interfaces"
+	"github.com/diogoX451/gateway-broker/internal/infra/transport/grpc/adapter/exhook"
+	"github.com/diogoX451/gateway-broker/internal/interfaces"
 	"google.golang.org/grpc"
 )
 

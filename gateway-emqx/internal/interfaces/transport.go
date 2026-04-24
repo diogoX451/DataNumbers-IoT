@@ -1,6 +1,6 @@
 package interfaces
 
-import "github.com/nextsync/gateway-broker/internal/infra/transport/grpc/adapter/exhook"
+import "github.com/diogoX451/gateway-broker/internal/infra/transport/grpc/adapter/exhook"
 
 const (
 	SUCCESS        = 200

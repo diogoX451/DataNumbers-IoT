@@ -1,9 +1,9 @@
 package repository
 
 import (
-	"github.com/nextsync/gateway-broker/internal/config"
-	"github.com/nextsync/gateway-broker/internal/domain/entities"
-	"github.com/nextsync/gateway-broker/internal/interfaces"
+	"github.com/diogoX451/gateway-broker/internal/config"
+	"github.com/diogoX451/gateway-broker/internal/domain/entities"
+	"github.com/diogoX451/gateway-broker/internal/interfaces"
 )
 
 var _ interfaces.IAclRepository = (*AclsRepository)(nil)

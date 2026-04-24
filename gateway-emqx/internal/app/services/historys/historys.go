@@ -1,8 +1,8 @@
 package historys_service
 
 import (
-	"github.com/nextsync/gateway-broker/internal/domain/entities"
-	"github.com/nextsync/gateway-broker/internal/interfaces"
+	"github.com/diogoX451/gateway-broker/internal/domain/entities"
+	"github.com/diogoX451/gateway-broker/internal/interfaces"
 )
 
 type HistoryService struct {

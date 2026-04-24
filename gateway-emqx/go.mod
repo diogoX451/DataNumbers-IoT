@@ -1,4 +1,4 @@
-module github.com/nextsync/gateway-broker
+module github.com/diogoX451/gateway-broker
 
 go 1.22.5
 

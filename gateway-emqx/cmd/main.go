@@ -4,15 +4,15 @@ import (
 	"log"
 	"sync"
 
+	"github.com/diogoX451/gateway-broker/cmd/routes"
+	"github.com/diogoX451/gateway-broker/internal/config"
+	"github.com/diogoX451/gateway-broker/internal/config/di"
+	emqx_config "github.com/diogoX451/gateway-broker/internal/config/emqx"
+	"github.com/diogoX451/gateway-broker/internal/infra/database"
 	serverMqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/nextsync/gateway-broker/cmd/routes"
-	"github.com/nextsync/gateway-broker/internal/config"
-	"github.com/nextsync/gateway-broker/internal/config/di"
-	emqx_config "github.com/nextsync/gateway-broker/internal/config/emqx"
-	"github.com/nextsync/gateway-broker/internal/infra/database"
 	"go.uber.org/dig"
 
-	"github.com/nextsync/gateway-broker/internal/interfaces"
+	"github.com/diogoX451/gateway-broker/internal/interfaces"
 )
 
 func init() {

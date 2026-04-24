@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	yamlConfig "github.com/diogoX451/gateway-broker/internal/config/yaml"
 	"github.com/joho/godotenv"
-	yamlConfig "github.com/nextsync/gateway-broker/internal/config/yaml"
 	"gopkg.in/yaml.v3"
 )
 

@@ -3,8 +3,8 @@ package nats
 import (
 	"fmt"
 
+	"github.com/diogoX451/gateway-broker/internal/interfaces"
 	"github.com/nats-io/nats.go"
-	"github.com/nextsync/gateway-broker/internal/interfaces"
 )
 
 var _ interfaces.IConnMessage = (*NatsConnect)(nil)

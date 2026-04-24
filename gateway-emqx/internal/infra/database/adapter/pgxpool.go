@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/diogoX451/gateway-broker/internal/config"
+	"github.com/diogoX451/gateway-broker/internal/interfaces"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/nextsync/gateway-broker/internal/config"
-	"github.com/nextsync/gateway-broker/internal/interfaces"
 )
 
 var _ interfaces.IConn = (*PgxPoolAdapter)(nil)

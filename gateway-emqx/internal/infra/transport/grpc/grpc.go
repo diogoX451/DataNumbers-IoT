@@ -1,6 +1,6 @@
 package grpc_transport
 
-import "github.com/nextsync/gateway-broker/internal/interfaces"
+import "github.com/diogoX451/gateway-broker/internal/interfaces"
 
 var _ interfaces.ITransport = (*GRPC)(nil)
 

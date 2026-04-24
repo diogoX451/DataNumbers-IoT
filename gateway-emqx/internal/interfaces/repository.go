@@ -1,6 +1,6 @@
 package interfaces
 
-import "github.com/nextsync/gateway-broker/internal/domain/entities"
+import "github.com/diogoX451/gateway-broker/internal/domain/entities"
 
 type IHistoryRepository interface {
 	FindAll() ([]*entities.History, error)
