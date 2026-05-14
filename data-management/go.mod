@@ -3,6 +3,7 @@ module github.com/data_numbers/data-management
 go 1.24.3
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/nats-io/nats.go v1.39.1
 )
