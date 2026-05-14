@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# DataNumbers IoT — Web
 
-## Getting Started
+Frontend reescrito do zero com **Vite + React 19 + TypeScript**, usando
+**TanStack Router** (file-based) e **TanStack Query** para data fetching.
 
-First, run the development server:
+## Stack
+
+- **Vite 6** — build/dev server
+- **React 19** + TypeScript strict
+- **TanStack Router** — roteamento type-safe, file-based em `src/routes/`
+- **TanStack Query** — cache de dados + devtools
+- **Tailwind 3** — utilitários atrelados a tokens em CSS custom properties
+- **axios** — cliente HTTP com interceptor de refresh de JWT
+
+## Scripts
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # dev em http://localhost:3000
+npm run build      # gera dist/ pronto para servir
+npm run preview    # serve dist/ localmente
+npm run typecheck  # tsc --noEmit
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Estrutura
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+```
+src/
+├── main.tsx              # bootstrap (Router + QueryClient + ThemeProvider)
+├── routes/               # rotas (file-based — TanStack Router plugin)
+│   ├── __root.tsx
+│   ├── _app.tsx          # layout autenticado (sidebar)
+│   ├── _app.index.tsx    # /
+│   ├── _app.devices.index.tsx
+│   ├── _app.devices.$id.tsx
+│   ├── _app.spaces.index.tsx
+│   ├── _app.spaces.$id.tsx
+│   ├── _app.rules.index.tsx
+│   ├── _app.rules.$id.tsx        # também serve /rules/new
+│   ├── _app.templates.tsx
+│   ├── _app.activity.tsx
+│   ├── _app.settings.tsx
+│   ├── sign-in.tsx
+│   └── onboarding.tsx
+├── layout/               # Sidebar + Topbar + Shell
+├── components/           # UI reutilizável (Button, Card, Pill, etc.)
+│   ├── ui/               # primitivos
+│   └── charts/           # Sparkline, LiveChart, SignalBars, BatteryBar
+├── api/queries.ts        # TanStack Query factories (mock → backend)
+├── data/                 # tipos + mock data
+├── lib/
+│   ├── api.ts            # axios + interceptor /auth/refresh
+│   ├── auth.ts           # storage de tokens
+│   ├── theme.tsx         # ThemeProvider (light/dark)
+│   ├── query.ts          # QueryClient singleton
+│   └── cn.ts             # clsx + tailwind-merge
+└── styles/globals.css    # tokens (CSS custom properties)
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+## Tema
 
-## Learn More
+Light/dark é controlado por `data-theme="light|dark"` no `<html>`. As cores
+ficam em `src/styles/globals.css` como CSS custom properties, e o
+`tailwind.config.ts` aponta os utilitários (`bg-bg`, `text-fg`, etc) para
+essas variáveis. Para mudar a paleta inteira, só editar o CSS.
 
-To learn more about Next.js, take a look at the following resources:
+O componente `useTheme()` (em `src/lib/theme.tsx`) persiste a escolha
+em `localStorage` e respeita `prefers-color-scheme` no primeiro load.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Mock vs backend real
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+Por enquanto, as queries em `src/api/queries.ts` resolvem com dados de
+`src/data/mock.ts`. Para conectar ao backend:
 
-## Deploy on Vercel
+1. Substituir cada `queryFn` por chamada via `api` (definido em `src/lib/api.ts`).
+2. O interceptor de refresh já está pronto: 401 → tenta `/api/auth/refresh`
+   com o `refresh_token` salvo, troca o par e refaz a request.
+3. As variáveis de ambiente são:
+   - `VITE_API_URL` — base URL do nginx/API gateway (default `http://localhost:8080`)
+   - `VITE_WS_URL` — endpoint WebSocket para telemetria ao vivo
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Roteamento
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+O TanStack Router gera `src/routeTree.gen.ts` a partir dos arquivos em
+`src/routes/`. Esse arquivo é **gerado** (está no `.gitignore`) — basta
+rodar `npm run dev` ou `npm run build` que o plugin do Vite cria.
+
+Convenção:
+
+- `_app` → layout aninhado (sidebar). Tudo dentro herda o shell autenticado.
+- `_app.devices.$id.tsx` → `/devices/:id` (param tipado via `Route.useParams()`).
+- `sign-in.tsx`, `onboarding.tsx` → rotas top-level sem sidebar.
+
+## Docker
+
+A imagem é multi-stage: Node faz o build, nginx serve o `dist/`. O Compose
+expõe na porta `${WEB_PORT:-3000}` da máquina host.
+
+```bash
+docker compose up -d web
+```

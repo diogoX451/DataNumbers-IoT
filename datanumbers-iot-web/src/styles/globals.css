@@ -2,82 +2,142 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --primary: 262.1 83.3% 57.8%; /* Purple */
-    --primary-foreground: 210 40% 98%;
-    
-    --sidebar-bg: 222.2 47.4% 11.2%;
-    --sidebar-active: 262.1 83.3% 57.8%;
-    
-    --iot-banner: 243.4 75.4% 58.6%; /* Blue/Purple from image */
-  }
+/* ============================================================
+   DataNumbers IoT — design tokens
+   Mantemos as cores como CSS custom properties: o Tailwind aponta
+   pra elas em tailwind.config.ts, então mudar `--accent` reflete em
+   todo lugar sem rebuild.
+   ============================================================ */
+:root {
+  --bg: #fcfcfd;
+  --bg-elev: #ffffff;
+  --bg-subtle: #f6f7f9;
+  --bg-hover: #f0f1f4;
+  --border: #e6e7eb;
+  --border-strong: #d4d6dc;
+
+  --fg: #0e0f12;
+  --fg-muted: #5b6068;
+  --fg-subtle: #8a8f99;
+  --fg-on-accent: #ffffff;
+
+  --accent: oklch(0.58 0.16 265);
+  --accent-hover: oklch(0.52 0.18 265);
+  --accent-fg: #ffffff;
+  --accent-bg: oklch(0.96 0.02 265);
+  --accent-border: oklch(0.88 0.05 265);
+
+  --success: oklch(0.65 0.14 160);
+  --success-bg: oklch(0.96 0.025 160);
+  --success-border: oklch(0.88 0.05 160);
+
+  --warn: oklch(0.74 0.14 75);
+  --warn-bg: oklch(0.97 0.03 75);
+  --warn-border: oklch(0.9 0.06 75);
+
+  --danger: oklch(0.62 0.19 25);
+  --danger-bg: oklch(0.96 0.025 25);
+  --danger-border: oklch(0.88 0.05 25);
+
+  --info: oklch(0.65 0.13 230);
+  --info-bg: oklch(0.96 0.025 230);
+  --info-border: oklch(0.88 0.05 230);
+
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --shadow-sm: 0 1px 2px rgba(15, 17, 26, 0.04);
+  --shadow: 0 1px 2px rgba(15, 17, 26, 0.04), 0 4px 12px rgba(15, 17, 26, 0.04);
+  --shadow-lg: 0 8px 24px rgba(15, 17, 26, 0.08), 0 2px 6px rgba(15, 17, 26, 0.04);
+
+  --sidebar-w: 232px;
+  --header-h: 56px;
+
+  color-scheme: light;
 }
 
+[data-theme="dark"] {
+  --bg: #0a0b0e;
+  --bg-elev: #111216;
+  --bg-subtle: #16181d;
+  --bg-hover: #1c1f26;
+  --border: #24262e;
+  --border-strong: #2f323b;
+
+  --fg: #f0f1f4;
+  --fg-muted: #9aa0ad;
+  --fg-subtle: #6b7280;
+
+  --accent: oklch(0.7 0.16 265);
+  --accent-hover: oklch(0.78 0.16 265);
+  --accent-bg: oklch(0.28 0.08 265);
+  --accent-border: oklch(0.36 0.1 265);
+
+  --success: oklch(0.74 0.14 160);
+  --success-bg: oklch(0.28 0.06 160);
+  --success-border: oklch(0.36 0.08 160);
+
+  --warn: oklch(0.8 0.14 75);
+  --warn-bg: oklch(0.3 0.06 75);
+  --warn-border: oklch(0.4 0.08 75);
+
+  --danger: oklch(0.72 0.18 25);
+  --danger-bg: oklch(0.3 0.08 25);
+  --danger-border: oklch(0.4 0.1 25);
+
+  --info: oklch(0.74 0.13 230);
+  --info-bg: oklch(0.28 0.06 230);
+  --info-border: oklch(0.36 0.08 230);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  color-scheme: dark;
+}
+
+html,
 body {
-  @apply bg-[#f1f5f9] text-slate-900;
-  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--fg);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
 }
 
-/* Custom Scrollbar */
+#root {
+  min-height: 100vh;
+}
+
+.mono,
+code,
+pre {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 rounded-full;
+  background: var(--border-strong);
+  border-radius: 10px;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-subtle);
 }
 
-.animate-fade-in-up {
-  animation: fadeInUp 0.5s ease-out;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Modern IoT Styles based on image */
-.iot-banner-header {
-  @apply bg-[#5c56e3] pt-12 pb-24 px-8 rounded-none -mb-16 flex justify-between items-start text-white;
-}
-
-.iot-card-main {
-  @apply bg-white rounded-xl shadow-xl border-0 overflow-hidden mx-8;
-}
-
-.iot-table-header {
-  @apply bg-white border-b border-slate-100 py-6 px-8;
-}
-
-.iot-badge-id {
-  @apply bg-[#eef2ff] text-[#5c56e3] px-3 py-1 rounded-lg text-xs font-medium border border-[#e0e7ff];
-}
-
-.iot-status-pill {
-  @apply bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-slate-200 flex items-center gap-2;
-}
-
-.iot-status-online {
-  @apply bg-emerald-50 text-emerald-600 border-emerald-100;
-}
-
-.iot-btn-outline {
-  @apply border border-[#5c56e3] text-[#5c56e3] hover:bg-[#f5f3ff] transition-all px-4 py-1.5 rounded-lg text-sm font-bold;
-}
-
-.iot-btn-solid {
-  @apply bg-[#5c56e3] text-white hover:bg-[#4a44cc] transition-all px-4 py-1.5 rounded-lg text-sm font-bold shadow-lg shadow-indigo-100;
-}
-
-.sidebar-item-active {
-  @apply bg-[#6d5dfc] text-white shadow-lg shadow-indigo-500/30;
+/* Pulse para indicar "ao vivo" no dot de status */
+.dot-live {
+  animation: pulse-dot 1.6s ease-out infinite;
 }
