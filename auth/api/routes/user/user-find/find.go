@@ -9,11 +9,10 @@ import (
 )
 
 func InitUserFindRoutes(db *gorm.DB, route *gin.RouterGroup) {
-	route.Use(middleware.Auth())
-
 	userFindRepo := userfind.NewUserFindRepository(db)
 	userFindService := userfind.NewUserFindService(userFindRepo)
 	userFindHandler := userfindHandler.NewFindUserHandler(userFindService)
 
-	route.GET("/find-user", userFindHandler.GetUser)
+	// Auth por rota (não no grupo) — ver comentário em update.go.
+	route.GET("/find-user", middleware.Auth(), userFindHandler.GetUser)
 }

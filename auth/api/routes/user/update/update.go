@@ -14,7 +14,7 @@ func InitUpdateRoutes(db *gorm.DB, route *gin.RouterGroup) {
 	updateService := userUpdate.NewService(updateRepo)
 	updateHandler := userHandler.NewUpdateHandler(updateService)
 
-	route.Use(middleware.Auth())
-	
-	route.PUT("/update-user", updateHandler.UpdateUser)
+	// Aplica Auth APENAS nessa rota; usar route.Use() polui o grupo /auth
+	// inteiro e quebra rotas subsequentes registradas como públicas.
+	route.PUT("/update-user", middleware.Auth(), updateHandler.UpdateUser)
 }

@@ -3,12 +3,18 @@ package userHandler
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/data_numbers/internal/config"
 	userlogin "github.com/data_numbers/internal/controllers/user/login"
 	token "github.com/data_numbers/pkg"
 	"github.com/data_numbers/pkg/utils"
 	"github.com/gin-gonic/gin"
+)
+
+const (
+	sessionTokenTTL = 24 * time.Hour
+	refreshTokenTTL = 30 * 24 * time.Hour
 )
 
 type LoginUserHandler struct {
@@ -41,10 +47,16 @@ func (handler *LoginUserHandler) LoginUser(ctx *gin.Context) {
 
 	case http.StatusOK:
 		tk := token.NewJWT()
-		hash, err := tk.GenerateToken(token.TokenData{
+		data := token.TokenData{
 			UserID:   user.ID.String(),
 			TenantID: user.TenantID.String(),
-		})
+		}
+		access, err := tk.GenerateToken(data)
+		if err != nil {
+			utils.APIResponse(ctx, "error", http.StatusInternalServerError, "Something went wrong", nil)
+			return
+		}
+		refresh, err := tk.GenerateRefreshToken(data)
 		if err != nil {
 			utils.APIResponse(ctx, "error", http.StatusInternalServerError, "Something went wrong", nil)
 			return
@@ -53,10 +65,14 @@ func (handler *LoginUserHandler) LoginUser(ctx *gin.Context) {
 		go func() {
 			conf := config.NewRedis()
 			client := conf.Client()
-			client.Set(context.Background(), user.ID.String(), hash, 0)
+			cctx := context.Background()
+			client.Set(cctx, user.ID.String(), access, sessionTokenTTL)
+			client.Set(cctx, "refresh:"+user.ID.String(), refresh, refreshTokenTTL)
 		}()
 
-		utils.APIResponse(ctx, "success", http.StatusOK, "Login success", gin.H{"token": hash})
+		utils.APIResponse(ctx, "success", http.StatusOK, "Login success", gin.H{
+			"token":         access,
+			"refresh_token": refresh,
+		})
 	}
-
 }
