@@ -12,3 +12,7 @@ type HistoryService struct {
 func (h *HistoryService) Create(history entities.History) error {
 	return h.Repo.Create(&history)
 }
+
+func (h *HistoryService) List() ([]*entities.History, error) {
+	return h.Repo.FindAll()
+}
