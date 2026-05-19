@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Create Google Calendar event",
+  "type": "object",
+  "properties": {
+    "summary": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "start": {
+      "type": "object",
+      "properties": {
+        "datetime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "end": {
+      "type": "object",
+      "properties": {
+        "datetime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "recurrence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "attendees": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "summary",
+    "start",
+    "end"
+  ]
+}

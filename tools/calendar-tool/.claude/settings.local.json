@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\rafael\\\\Documents\\\\GitHub\\\\DataNumbers-IoT\\\\tools\\\\calendar-tool\" -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "Bash(go get *)",
+      "Bash(go build *)",
+      "Bash(GOWORK=off go build ./...)"
+    ]
+  }
+}
