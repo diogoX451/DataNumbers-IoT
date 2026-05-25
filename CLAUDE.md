@@ -1,22 +1,32 @@
 # Session Bootstrap - DataNumbers-IoT
 
-Este projeto usa memoria compartilhada em:
-- `/home/dioguin/Documentos/base_conhecimento`
+Este projeto compartilha uma base de conhecimento opcional, configurável via
+variável de ambiente `BASE_CONHECIMENTO_DIR`. Quando definida, aplique o
+conteúdo abaixo; caso contrário, este bootstrap é apenas informativo.
 
-Leitura obrigatoria no inicio da sessao (ordem):
-- `/home/dioguin/Documentos/base_conhecimento/README.md`
-- `/home/dioguin/Documentos/base_conhecimento/schema/assistant-bootstrap-global.md`
+Sugestão de leitura inicial (se a variável estiver configurada):
+
+- `$BASE_CONHECIMENTO_DIR/README.md`
+- `$BASE_CONHECIMENTO_DIR/schema/assistant-bootstrap-global.md`
 
 Regra de continuidade:
-- identificar o dominio/paginas relevantes antes de codar;
-- registrar implementacoes relevantes na wiki e no log do dominio;
-- se wiki e codigo divergirem, prevalece o codigo e a wiki deve ser atualizada.
 
-Ao concluir implementacao:
-- atualizar as paginas impactadas em `/home/dioguin/Documentos/base_conhecimento/wiki/domains/`;
-- atualizar indice/log do dominio relacionado.
+- identificar o domínio/páginas relevantes antes de codar;
+- registrar implementações relevantes na wiki e no log do domínio;
+- se wiki e código divergirem, prevalece o código e a wiki deve ser atualizada.
 
-Observacao:
-- Este bootstrap e generico.
-- Para um bootstrap especifico por dominio, adicione este projeto ao script:
-- `/home/dioguin/Documentos/base_conhecimento/scripts/install-assistant-bootstrap.sh`
+Ao concluir uma implementação:
+
+- atualizar as páginas impactadas em `$BASE_CONHECIMENTO_DIR/wiki/domains/`;
+- atualizar índice/log do domínio relacionado.
+
+## Convenções deste repositório
+
+- Banco único TimescaleDB com schemas por domínio (`auth`, `gateway`,
+  `device_manager`, `data_management`, `automation`).
+- Migrations canônicas vivem em `infra/postgres/init/001-schemas.sql`. Não
+  duplicar DDL em pastas de migrations por serviço.
+- NATS é o barramento canônico. Telemetria flui por
+  `iot.telemetry.received` (stream `IOT_TELEMETRY`, JetStream).
+- ACL MQTT é gerenciada exclusivamente pelo `gateway-emqx`
+  (`POST /api/gateway/create-acl`); não duplicar em `auth`.

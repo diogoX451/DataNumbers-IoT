@@ -11,4 +11,5 @@ type IAclsService interface {
 
 type IHistoryService interface {
 	Create(entities.History) error
+	List() ([]*entities.History, error)
 }

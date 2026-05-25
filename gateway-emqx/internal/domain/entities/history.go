@@ -7,5 +7,5 @@ type History struct {
 	Username    string `json:"username"`
 	Topic       string `json:"topic"`
 	CreatedAt   string `json:"created_at"`
-	UpdateAt    string `json:"update_at"`
+	UpdatedAt   string `json:"updated_at"`
 }

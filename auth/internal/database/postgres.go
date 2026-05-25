@@ -25,7 +25,7 @@ func (d *Postgres) Connect() *gorm.DB {
 		panic("failed to connect database")
 	}
 
-	db.AutoMigrate(&migrate.Users{}, &migrate.MqttAcl{})
+	db.AutoMigrate(&migrate.Users{})
 
 	return db
 }

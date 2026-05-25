@@ -115,15 +115,13 @@ func (s *GrpcService) OnMessageDropped(ctx context.Context, in *exhook.MessageDr
 		username = in.Message.Headers["username"]
 	}
 
-	err := s.history(entities.History{
+	if err := s.history(entities.History{
 		Observation: "Message dropped",
 		Type:        "error",
 		Username:    username,
 		Topic:       in.Message.Topic,
-	})
-
-	if err != nil {
-		log.Fatalf("error to create history: %v", err)
+	}); err != nil {
+		log.Printf("error to create history: %v", err)
 	}
 
 	return &exhook.EmptySuccess{}, nil

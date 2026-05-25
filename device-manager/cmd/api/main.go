@@ -54,8 +54,11 @@ type templateRequest struct {
 type deviceRequest struct {
 	DeviceName  string `json:"device_name"`
 	TemplateID  string `json:"template_id"`
-	MQTTTopic   string `json:"mqtt_topic"`
 	DeviceState string `json:"device_status"`
+	// MQTTTopic intencionalmente removido: o tópico é derivado server-side
+	// a partir do device_id para evitar colisão entre tenants e abuso (ex.
+	// publicar em $SYS/...). Use PUT /devices/{id}/topic se quiser permitir
+	// override explícito no futuro.
 }
 
 type actuatorRequest struct {
@@ -105,12 +108,23 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", a.health)
+
 	mux.Handle("POST /templates", a.authMiddleware(http.HandlerFunc(a.createTemplate)))
 	mux.Handle("GET /templates", a.authMiddleware(http.HandlerFunc(a.listTemplates)))
+	mux.Handle("GET /templates/{id}", a.authMiddleware(http.HandlerFunc(a.getTemplate)))
+	mux.Handle("PUT /templates/{id}", a.authMiddleware(http.HandlerFunc(a.updateTemplate)))
+	mux.Handle("DELETE /templates/{id}", a.authMiddleware(http.HandlerFunc(a.deleteTemplate)))
+
 	mux.Handle("POST /devices", a.authMiddleware(http.HandlerFunc(a.createDevice)))
 	mux.Handle("GET /devices", a.authMiddleware(http.HandlerFunc(a.listDevices)))
+	mux.Handle("GET /devices/{id}", a.authMiddleware(http.HandlerFunc(a.getDevice)))
+	mux.Handle("PUT /devices/{id}", a.authMiddleware(http.HandlerFunc(a.updateDevice)))
+	mux.Handle("DELETE /devices/{id}", a.authMiddleware(http.HandlerFunc(a.deleteDevice)))
+
 	mux.Handle("POST /devices/{id}/actuators", a.authMiddleware(http.HandlerFunc(a.createActuator)))
 	mux.Handle("GET /devices/{id}/actuators", a.authMiddleware(http.HandlerFunc(a.listActuators)))
+	mux.Handle("PUT /actuators/{id}", a.authMiddleware(http.HandlerFunc(a.updateActuator)))
+	mux.Handle("DELETE /actuators/{id}", a.authMiddleware(http.HandlerFunc(a.deleteActuator)))
 
 	port := env("HTTP_PORT", "3001")
 	log.Printf("device-manager listening on :%s", port)
@@ -122,7 +136,6 @@ func main() {
 func (a *app) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
-		log.Printf("DEBUG: Received Auth Header: [%s]", authHeader)
 		if authHeader == "" {
 			writeError(w, http.StatusUnauthorized, errors.New("missing authorization header"))
 			return
@@ -312,32 +325,32 @@ func (a *app) createDevice(w http.ResponseWriter, r *http.Request) {
 	userID := ctx.Value(userIDKey).(string)
 	tenantID := ctx.Value(tenantIDKey).(string)
 
-	deviceID := newEventID()
-	if input.MQTTTopic == "" {
-		input.MQTTTopic = "gateway.data/" + deviceID
-	}
 	if input.DeviceState == "" {
 		input.DeviceState = "OFFLINE"
 	}
 
+	// Insere com device_id gerado pelo DB e deriva o mqtt_topic do UUID
+	// resultante numa segunda etapa, para nunca aceitar tópico do cliente.
+	var deviceID string
 	err := a.db.QueryRowContext(ctx, `
-		INSERT INTO device_manager.devices (device_id, user_id, template_id, device_name, device_status, mqtt_topic, tenant_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO device_manager.devices (user_id, template_id, device_name, device_status, mqtt_topic, tenant_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING device_id::text
-	`, deviceID, userID, input.TemplateID, input.DeviceName, strings.ToUpper(input.DeviceState), input.MQTTTopic, tenantID).Scan(&deviceID)
+	`, userID, input.TemplateID, input.DeviceName, strings.ToUpper(input.DeviceState), "pending", tenantID).Scan(&deviceID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	// Salvar no Redis para enriquecimento de dados
-	redisKey := fmt.Sprintf("device:%s", deviceID)
-	redisData := map[string]interface{}{
-		"tenant_id":   tenantID,
-		"template_id": input.TemplateID,
+	mqttTopic := "gateway.data/" + deviceID
+	if _, err := a.db.ExecContext(ctx, `
+		UPDATE device_manager.devices SET mqtt_topic = $1, updated_at = now() WHERE device_id = $2
+	`, mqttTopic, deviceID); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
 	}
-	encoded, _ := json.Marshal(redisData)
-	a.redis.Set(ctx, redisKey, encoded, 0)
+
+	a.cacheDevice(ctx, deviceID, tenantID, input.TemplateID, mqttTopic)
 
 	event := map[string]any{
 		"event_id":   newEventID(),
@@ -350,7 +363,7 @@ func (a *app) createDevice(w http.ResponseWriter, r *http.Request) {
 			"template_id":   input.TemplateID,
 			"device_name":   input.DeviceName,
 			"device_status": strings.ToUpper(input.DeviceState),
-			"mqtt_topic":    input.MQTTTopic,
+			"mqtt_topic":    mqttTopic,
 		},
 	}
 	a.publish("device.created", event)
@@ -360,7 +373,7 @@ func (a *app) createDevice(w http.ResponseWriter, r *http.Request) {
 		"template_id":   input.TemplateID,
 		"device_name":   input.DeviceName,
 		"device_status": strings.ToUpper(input.DeviceState),
-		"mqtt_topic":    input.MQTTTopic,
+		"mqtt_topic":    mqttTopic,
 		"tenant_id":     tenantID,
 	})
 }
@@ -489,6 +502,374 @@ func (a *app) listActuators(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"data": items})
 }
 
+// --- Template GET/UPDATE/DELETE ---
+
+func (a *app) getTemplate(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	tenantID := r.Context().Value(tenantIDKey).(string)
+
+	var name, description string
+	err := a.db.QueryRowContext(r.Context(), `
+		SELECT template_name, COALESCE(description, '')
+		FROM device_manager.device_templates
+		WHERE template_id = $1 AND tenant_id = $2
+	`, id, tenantID).Scan(&name, &description)
+	if err == sql.ErrNoRows {
+		writeError(w, http.StatusNotFound, errors.New("template not found"))
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	rows, err := a.db.QueryContext(r.Context(), `
+		SELECT field_id::text, field_name, field_type, required
+		FROM device_manager.template_fields
+		WHERE template_id = $1
+		ORDER BY created_at ASC
+	`, id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	defer rows.Close()
+
+	fields := []templateField{}
+	for rows.Next() {
+		var f templateField
+		if err := rows.Scan(&f.FieldID, &f.Name, &f.Type, &f.Required); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		fields = append(fields, f)
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"template_id": id,
+		"name":        name,
+		"description": description,
+		"fields":      fields,
+		"tenant_id":   tenantID,
+	})
+}
+
+func (a *app) updateTemplate(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	tenantID := r.Context().Value(tenantIDKey).(string)
+	userID := r.Context().Value(userIDKey).(string)
+
+	var input templateRequest
+	if err := decodeJSON(r, &input); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if input.Name == "" {
+		writeError(w, http.StatusBadRequest, errors.New("name is required"))
+		return
+	}
+
+	ctx := r.Context()
+	tx, err := a.db.BeginTx(ctx, nil)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	defer tx.Rollback()
+
+	res, err := tx.ExecContext(ctx, `
+		UPDATE device_manager.device_templates
+		SET template_name = $1, description = $2, updated_at = now()
+		WHERE template_id = $3 AND tenant_id = $4
+	`, input.Name, input.Description, id, tenantID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if affected, _ := res.RowsAffected(); affected == 0 {
+		writeError(w, http.StatusNotFound, errors.New("template not found"))
+		return
+	}
+
+	// Estratégia simples: apaga fields existentes e re-insere. Para CRUD por
+	// campo individual, futuramente expor /templates/{id}/fields.
+	if _, err := tx.ExecContext(ctx, `DELETE FROM device_manager.template_fields WHERE template_id = $1`, id); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	for i := range input.Fields {
+		f := input.Fields[i]
+		if f.Name == "" || f.Type == "" {
+			writeError(w, http.StatusBadRequest, errors.New("name and type are required"))
+			return
+		}
+		if err := tx.QueryRowContext(ctx, `
+			INSERT INTO device_manager.template_fields (template_id, field_name, field_type, required)
+			VALUES ($1, $2, $3, $4)
+			RETURNING field_id::text
+		`, id, f.Name, strings.ToLower(f.Type), f.Required).Scan(&input.Fields[i].FieldID); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	a.publish("template.updated", map[string]any{
+		"event_id":    newEventID(),
+		"event_type":  "template.updated",
+		"template_id": id,
+		"user_id":     userID,
+		"tenant_id":   tenantID,
+		"timestamp":   time.Now().UTC().Format(time.RFC3339),
+		"fields":      templateEventFields(input.Fields),
+	})
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"template_id": id,
+		"name":        input.Name,
+		"description": input.Description,
+		"tenant_id":   tenantID,
+		"fields":      input.Fields,
+	})
+}
+
+func (a *app) deleteTemplate(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	tenantID := r.Context().Value(tenantIDKey).(string)
+	userID := r.Context().Value(userIDKey).(string)
+
+	res, err := a.db.ExecContext(r.Context(), `
+		DELETE FROM device_manager.device_templates
+		WHERE template_id = $1 AND tenant_id = $2
+	`, id, tenantID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if affected, _ := res.RowsAffected(); affected == 0 {
+		writeError(w, http.StatusNotFound, errors.New("template not found"))
+		return
+	}
+
+	a.publish("template.deleted", map[string]any{
+		"event_id":    newEventID(),
+		"event_type":  "template.deleted",
+		"template_id": id,
+		"user_id":     userID,
+		"tenant_id":   tenantID,
+		"timestamp":   time.Now().UTC().Format(time.RFC3339),
+	})
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// --- Device GET/UPDATE/DELETE ---
+
+func (a *app) getDevice(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	tenantID := r.Context().Value(tenantIDKey).(string)
+
+	var name, status, topic, templateID, templateName string
+	err := a.db.QueryRowContext(r.Context(), `
+		SELECT d.device_name, d.device_status, d.mqtt_topic, d.template_id::text, COALESCE(t.template_name, '')
+		FROM device_manager.devices d
+		LEFT JOIN device_manager.device_templates t ON d.template_id = t.template_id
+		WHERE d.device_id = $1 AND d.tenant_id = $2
+	`, id, tenantID).Scan(&name, &status, &topic, &templateID, &templateName)
+	if err == sql.ErrNoRows {
+		writeError(w, http.StatusNotFound, errors.New("device not found"))
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"device_id":     id,
+		"device_name":   name,
+		"device_status": status,
+		"mqtt_topic":    topic,
+		"template_id":   templateID,
+		"template_name": templateName,
+		"tenant_id":     tenantID,
+	})
+}
+
+func (a *app) updateDevice(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	tenantID := r.Context().Value(tenantIDKey).(string)
+	userID := r.Context().Value(userIDKey).(string)
+
+	var input struct {
+		DeviceName  string `json:"device_name"`
+		TemplateID  string `json:"template_id"`
+		DeviceState string `json:"device_status"`
+	}
+	if err := decodeJSON(r, &input); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	ctx := r.Context()
+	res, err := a.db.ExecContext(ctx, `
+		UPDATE device_manager.devices
+		SET device_name   = COALESCE(NULLIF($1, ''), device_name),
+		    template_id   = COALESCE(NULLIF($2, '')::uuid, template_id),
+		    device_status = COALESCE(NULLIF($3, ''), device_status),
+		    updated_at    = now()
+		WHERE device_id = $4 AND tenant_id = $5
+	`, input.DeviceName, input.TemplateID, strings.ToUpper(input.DeviceState), id, tenantID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if affected, _ := res.RowsAffected(); affected == 0 {
+		writeError(w, http.StatusNotFound, errors.New("device not found"))
+		return
+	}
+
+	// Recarrega para retornar e atualizar o cache Redis.
+	var name, status, topic, templateID string
+	if err := a.db.QueryRowContext(ctx, `
+		SELECT device_name, device_status, mqtt_topic, template_id::text
+		FROM device_manager.devices WHERE device_id = $1
+	`, id).Scan(&name, &status, &topic, &templateID); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	a.cacheDevice(ctx, id, tenantID, templateID, topic)
+
+	a.publish("device.updated", map[string]any{
+		"event_id":   newEventID(),
+		"event_type": "device.updated",
+		"device_id":  id,
+		"user_id":    userID,
+		"tenant_id":  tenantID,
+		"timestamp":  time.Now().UTC().Format(time.RFC3339),
+		"data": map[string]any{
+			"template_id":   templateID,
+			"device_name":   name,
+			"device_status": status,
+			"mqtt_topic":    topic,
+		},
+	})
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"device_id":     id,
+		"device_name":   name,
+		"device_status": status,
+		"mqtt_topic":    topic,
+		"template_id":   templateID,
+		"tenant_id":     tenantID,
+	})
+}
+
+func (a *app) deleteDevice(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	tenantID := r.Context().Value(tenantIDKey).(string)
+	userID := r.Context().Value(userIDKey).(string)
+
+	res, err := a.db.ExecContext(r.Context(), `
+		DELETE FROM device_manager.devices
+		WHERE device_id = $1 AND tenant_id = $2
+	`, id, tenantID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if affected, _ := res.RowsAffected(); affected == 0 {
+		writeError(w, http.StatusNotFound, errors.New("device not found"))
+		return
+	}
+
+	a.redis.Del(r.Context(), fmt.Sprintf("device:%s", id))
+
+	a.publish("device.deleted", map[string]any{
+		"event_id":   newEventID(),
+		"event_type": "device.deleted",
+		"device_id":  id,
+		"user_id":    userID,
+		"tenant_id":  tenantID,
+		"timestamp":  time.Now().UTC().Format(time.RFC3339),
+	})
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// --- Actuator UPDATE/DELETE ---
+
+func (a *app) updateActuator(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	tenantID := r.Context().Value(tenantIDKey).(string)
+
+	var input actuatorRequest
+	if err := decodeJSON(r, &input); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	schemaRaw, _ := json.Marshal(input.PayloadSchema)
+	res, err := a.db.ExecContext(r.Context(), `
+		UPDATE device_manager.actuators a
+		SET name = COALESCE(NULLIF($1, ''), a.name),
+		    command_topic = COALESCE(NULLIF($2, ''), a.command_topic),
+		    payload_schema = COALESCE($3::jsonb, a.payload_schema),
+		    updated_at = now()
+		FROM device_manager.devices d
+		WHERE a.actuator_id = $4 AND a.device_id = d.device_id AND d.tenant_id = $5
+	`, input.Name, input.CommandTopic, string(schemaRaw), id, tenantID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if affected, _ := res.RowsAffected(); affected == 0 {
+		writeError(w, http.StatusNotFound, errors.New("actuator not found"))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "updated"})
+}
+
+func (a *app) deleteActuator(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	tenantID := r.Context().Value(tenantIDKey).(string)
+
+	res, err := a.db.ExecContext(r.Context(), `
+		DELETE FROM device_manager.actuators a
+		USING device_manager.devices d
+		WHERE a.actuator_id = $1 AND a.device_id = d.device_id AND d.tenant_id = $2
+	`, id, tenantID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if affected, _ := res.RowsAffected(); affected == 0 {
+		writeError(w, http.StatusNotFound, errors.New("actuator not found"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// cacheDevice escreve device:{id} no Redis com TTL e idealmente também o
+// mapping topic:{topic} -> device_id, que o gateway-emqx usa para enriquecer
+// telemetria sem device_id explícito no payload.
+func (a *app) cacheDevice(ctx context.Context, deviceID, tenantID, templateID, mqttTopic string) {
+	const ttl = 30 * 24 * time.Hour
+	payload, _ := json.Marshal(map[string]string{
+		"tenant_id":   tenantID,
+		"template_id": templateID,
+	})
+	a.redis.Set(ctx, fmt.Sprintf("device:%s", deviceID), payload, ttl)
+	if mqttTopic != "" {
+		a.redis.Set(ctx, fmt.Sprintf("topic:%s", mqttTopic), deviceID, ttl)
+	}
+}
+
 func (a *app) publish(subject string, payload any) {
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -551,24 +932,18 @@ func requiredEnv(key string) string {
 }
 
 func (a *app) syncDevicesToRedis(ctx context.Context) error {
-	rows, err := a.db.QueryContext(ctx, "SELECT device_id::text, tenant_id::text, template_id::text FROM device_manager.devices")
+	rows, err := a.db.QueryContext(ctx, "SELECT device_id::text, tenant_id::text, template_id::text, mqtt_topic FROM device_manager.devices")
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var dID, tID, tempID string
-		if err := rows.Scan(&dID, &tID, &tempID); err != nil {
+		var dID, tID, tempID, topic string
+		if err := rows.Scan(&dID, &tID, &tempID, &topic); err != nil {
 			return err
 		}
-		redisKey := fmt.Sprintf("device:%s", dID)
-		redisData := map[string]interface{}{
-			"tenant_id":   tID,
-			"template_id": tempID,
-		}
-		encoded, _ := json.Marshal(redisData)
-		a.redis.Set(ctx, redisKey, encoded, 0)
+		a.cacheDevice(ctx, dID, tID, tempID, topic)
 	}
 	log.Println("Devices synced to Redis successfully")
 	return nil

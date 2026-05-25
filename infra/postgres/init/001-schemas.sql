@@ -120,10 +120,29 @@ CREATE TABLE IF NOT EXISTS automation.rules (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     is_active BOOLEAN DEFAULT true,
-    trigger_condition JSONB NOT NULL,
+    -- Expressão govaluate (ex.: "temperatura > 25 && umidade < 50").
+    -- Era JSONB mas o engine usa string; trocar para TEXT alinha código e schema.
+    trigger_condition TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Bancos pré-existentes podem ter trigger_condition como JSONB; converter.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'automation'
+          AND table_name = 'rules'
+          AND column_name = 'trigger_condition'
+          AND data_type = 'jsonb'
+    ) THEN
+        ALTER TABLE automation.rules
+        ALTER COLUMN trigger_condition TYPE TEXT USING trigger_condition::text;
+    END IF;
+END
+$$;
 
 CREATE TABLE IF NOT EXISTS automation.scenarios (
     scenario_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -146,10 +165,28 @@ CREATE TABLE IF NOT EXISTS automation.rule_actions (
     action_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     rule_id UUID NOT NULL REFERENCES automation.rules(rule_id) ON DELETE CASCADE,
     actuator_id UUID NOT NULL REFERENCES device_manager.actuators(actuator_id),
-    payload_template JSONB NOT NULL,
+    -- Template com placeholders (${payload.x}) interpolados em runtime; não é
+    -- JSON válido antes da interpolação. Armazenamos como TEXT.
+    payload_template TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'automation'
+          AND table_name = 'rule_actions'
+          AND column_name = 'payload_template'
+          AND data_type = 'jsonb'
+    ) THEN
+        ALTER TABLE automation.rule_actions
+        ALTER COLUMN payload_template TYPE TEXT USING payload_template::text;
+    END IF;
+END
+$$;
 
 CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON auth.users(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_acls_tenant_id ON gateway.acls(tenant_id);

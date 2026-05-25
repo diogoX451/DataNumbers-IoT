@@ -8,4 +8,11 @@ datanumbers-iot-web/node_modules/
 gateway-emqx/.env
 gateway-emqx/app.log
 arduino/sensor_temperatura/secrets.h
-datanumbers-iot-web/.agents
+datanumbers-iot-web/.agents*.log
+*.log
+
+# Binários gerados por `go build` rodado fora do Docker.
+device-manager/api
+rule-engine/api
+data-management/worker
+.claude/
