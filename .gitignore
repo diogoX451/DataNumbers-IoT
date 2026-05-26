@@ -16,3 +16,4 @@ device-manager/api
 rule-engine/api
 data-management/worker
 .claude/
+datanumbers-iot-web/.agents
