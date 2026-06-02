@@ -6,20 +6,44 @@ import (
 	"time"
 
 	"data_numbers/internal/broker"
-	"data_numbers/internal/repository"
 
 	"golang.org/x/oauth2"
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/option"
 )
 
+type TokenGetter interface {
+	GetUserCalendarToken(userID string) (*oauth2.Token, error)
+}
+
+type CreateEventInput struct {
+	Summary     string
+	Location    string
+	Description string
+	Start       time.Time
+	End         time.Time
+	Recurrence  []string
+	Attendees   []string
+}
+
+type UpdateEventInput struct {
+	EventID     string
+	Summary     string
+	Location    string
+	Description string
+	Start       *time.Time
+	End         *time.Time
+	Recurrence  []string
+	Attendees   []string
+}
+
 type CalendarService struct {
-	userRepo  *repository.UserRepository
+	userRepo  TokenGetter
 	publisher *broker.EventPublisher
 	oauthCfg  *oauth2.Config
 }
 
-func NewCalendarService(userRepo *repository.UserRepository, publisher *broker.EventPublisher, oauthCfg *oauth2.Config) *CalendarService {
+func NewCalendarService(userRepo TokenGetter, publisher *broker.EventPublisher, oauthCfg *oauth2.Config) *CalendarService {
 	return &CalendarService{
 		userRepo:  userRepo,
 		publisher: publisher,

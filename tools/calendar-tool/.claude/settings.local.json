@@ -6,7 +6,11 @@
       "Bash(Sort-Object FullName)",
       "Bash(go get *)",
       "Bash(go build *)",
-      "Bash(GOWORK=off go build ./...)"
+      "Bash(GOWORK=off go build ./...)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\rafael\\\\Documents\\\\GitHub\\\\DataNumbers-IoT\\\\tools\\\\calendar-tool\\\\internal\\\\repository\\\\user_repository.go\" -Force)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\rafael\\\\Documents\\\\GitHub\\\\DataNumbers-IoT\\\\tools\\\\calendar-tool\\\\internal\\\\services\\\\event_service.go\" -Force)",
+      "Bash(Write-Host \"deleted\")",
+      "Bash(go vet *)"
     ]
   }
 }

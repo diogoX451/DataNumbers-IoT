@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"data_numbers/internal/broker"
 	"data_numbers/internal/handlers"
@@ -18,6 +20,14 @@ import (
 	"golang.org/x/oauth2/google"
 	googlecalendar "google.golang.org/api/calendar/v3"
 )
+
+type tokenPayload struct {
+	UserID       string    `json:"user_id"`
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
+	TokenType    string    `json:"token_type"`
+	Expiry       time.Time `json:"expiry"`
+}
 
 func main() {
 	_ = godotenv.Load()
@@ -41,10 +51,32 @@ func main() {
 		Endpoint:     google.Endpoint,
 	}
 
-	publisher := broker.NewEventPublisher(nc)
-	userRepo := repository.NewUserRepository()
+	tokenStore := repository.NewTokenStore()
 
-	calendarSvc := services.NewCalendarService(userRepo, publisher, oauthCfg)
+	tokenSubject := os.Getenv("NATS_TOKEN_SUBJECT")
+	if tokenSubject == "" {
+		log.Fatal("NATS_TOKEN_SUBJECT is required")
+	}
+	if _, err := nc.Subscribe(tokenSubject, func(msg *nats.Msg) {
+		var p tokenPayload
+		if err := json.Unmarshal(msg.Data, &p); err != nil {
+			log.Printf("token subscription: invalid payload: %v", err)
+			return
+		}
+		tokenStore.SetToken(p.UserID, &oauth2.Token{
+			AccessToken:  p.AccessToken,
+			RefreshToken: p.RefreshToken,
+			TokenType:    p.TokenType,
+			Expiry:       p.Expiry,
+		})
+		log.Printf("token updated for user %s", p.UserID)
+	}); err != nil {
+		log.Fatalf("nats subscribe %s: %v", tokenSubject, err)
+	}
+
+	publisher := broker.NewEventPublisher(nc)
+
+	calendarSvc := services.NewCalendarService(tokenStore, publisher, oauthCfg)
 	authSvc := services.NewAuthService(oauthCfg)
 	notifSvc := services.NewNotificationService(publisher)
 

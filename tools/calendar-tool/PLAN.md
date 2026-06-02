@@ -12,16 +12,15 @@
 
 | File | Status | Action |
 |------|--------|--------|
-| `broker/event_publisher.go` | exists | Add `EventID` to `CreateEventPayload`, add `WebhookEventPayload` + `PublishWebhookEvent` |
-| `services/calendar_service.go` | TODO | Google Calendar API CRUD + NATS publish |
-| `services/auth_service.go` | TODO | OAuth2 URL generation + code exchange |
-| `services/notification_service.go` | TODO | Webhook → NATS |
-| `handlers/event_handler.go` | TODO | POST /events, PUT /events/{id}, DELETE /events/{id} |
-| `handlers/auth_handler.go` | TODO | GET /auth/login, GET /auth/callback |
-| `handlers/calendar_handler.go` | TODO | POST /webhook/google-calendar |
-| `api/main.go` | stub | Full wiring: NATS + OAuth2 + chi router |
-| `repository/postgres.go` | TODO stub | Keep mock, add DB placeholder |
-| `.env` | exists | Add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URL, PORT |
+| `broker/event_publisher.go` | done | CRUD + webhook payloads |
+| `services/calendar_service.go` | done | Google Calendar API CRUD + NATS publish, uses `TokenGetter` interface |
+| `services/auth_service.go` | done | OAuth2 URL generation + code exchange |
+| `services/notification_service.go` | done | Webhook → NATS |
+| `handlers/event_handler.go` | done | POST /events, PUT /events/{id}, DELETE /events/{id} |
+| `handlers/auth_handler.go` | done | GET /auth/login, GET /auth/callback |
+| `handlers/calendar_handler.go` | done | POST /webhook/google-calendar |
+| `api/main.go` | done | Full wiring: NATS + token subscription + OAuth2 + chi router |
+| `repository/token_store.go` | done | In-memory token store populated via NATS subscription |
 
 ---
 
@@ -52,9 +51,8 @@ GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_REDIRECT_URL=http://localhost:8080/auth/callback
 NATS_URL=nats://localhost:4222
+NATS_TOKEN_SUBJECT=         # subject where token messages are received
 PORT=8080
-TEMP_GOOGLE_ACCESS_TOKEN=   # used by UserRepository mock
-TEMP_GOOGLE_REFRESH_TOKEN=  # used by UserRepository mock
 ```
 
 ## Dependency to add
@@ -65,7 +63,8 @@ github.com/go-chi/chi/v5
 
 ## Notes
 
-- `UserRepository.GetUserCalendarToken` stays as mock (env vars) — real DB impl deferred
-- OAuth2 callback returns tokens as JSON — storing in DB is deferred
+- `TokenStore` holds tokens in memory keyed by `user_id`; populated via NATS subscription on `NATS_TOKEN_SUBJECT`
+- Token NATS message format: `{ "user_id", "access_token", "refresh_token", "token_type", "expiry" }`
+- OAuth2 callback returns tokens as JSON — storing/propagating to NATS is responsibility of the consumer
 - Webhook receiver only publishes to NATS; Watch channel registration is out of scope
 - Google Calendar `X-Goog-Resource-State: sync` is acknowledged silently (no NATS publish)
