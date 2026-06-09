@@ -1,51 +1,31 @@
 package usercreate
 
 import (
-	"fmt"
-
-	"github.com/data_numbers/internal/controllers/topics"
 	"github.com/data_numbers/internal/models"
 )
 
 type IUserCreateService interface {
-	CreateUser(input UserCreateInput, mqttAcl topics.TopicsInput) (*models.User, error)
+	CreateUser(input UserCreateInput) (*models.User, error)
 	GetUser(id string) (*models.User, error)
 }
 
 type UserCreateService struct {
-	repo         IRepository
-	topicService topics.ITopicsService
+	repo IRepository
 }
 
-func NewService(repo IRepository, topicService topics.ITopicsService) *UserCreateService {
+func NewService(repo IRepository) *UserCreateService {
 	return &UserCreateService{
-		repo:         repo,
-		topicService: topicService,
+		repo: repo,
 	}
 }
 
-func (service *UserCreateService) CreateUser(input UserCreateInput, mqttAcl topics.TopicsInput) (*models.User, error) {
-	user, err := service.repo.CreateUser(input)
-	if err != nil {
-		return nil, err
-	}
-
-	go func() {
-		mqttAcl.UserId = user.ID
-		_, err := service.topicService.CreateMqttAcl(mqttAcl)
-		if err != nil {
-			fmt.Println(err)
-		}
-	}()
-
-	return user, nil
+// CreateUser cria o usuário e seu tenant. A ACL MQTT é responsabilidade
+// exclusiva do gateway-emqx (POST /api/gateway/create-acl) — não duplicamos
+// aqui para evitar drift entre duas tabelas (auth.mqtt_acl vs gateway.acls).
+func (service *UserCreateService) CreateUser(input UserCreateInput) (*models.User, error) {
+	return service.repo.CreateUser(input)
 }
 
 func (service *UserCreateService) GetUser(id string) (*models.User, error) {
-	user, err := service.repo.GetUser(id)
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
+	return service.repo.GetUser(id)
 }

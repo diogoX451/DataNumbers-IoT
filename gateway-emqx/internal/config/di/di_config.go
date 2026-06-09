@@ -156,9 +156,11 @@ func newAclService(repo interfaces.IAclRepository) interfaces.IAclsService {
 }
 
 func newRouter(
-	route interfaces.IAclsService,
+	acl interfaces.IAclsService,
+	history interfaces.IHistoryService,
 ) *routes.Routes {
 	return &routes.Routes{
-		ServiceAcl: route,
+		ServiceAcl:     acl,
+		ServiceHistory: history,
 	}
 }
