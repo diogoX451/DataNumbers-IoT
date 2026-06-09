@@ -12,10 +12,6 @@ import (
 	"google.golang.org/api/option"
 )
 
-type TokenGetter interface {
-	GetUserCalendarToken(userID string) (*oauth2.Token, error)
-}
-
 type CreateEventInput struct {
 	Summary     string
 	Location    string
@@ -38,30 +34,24 @@ type UpdateEventInput struct {
 }
 
 type CalendarService struct {
-	userRepo  TokenGetter
 	publisher *broker.EventPublisher
 	oauthCfg  *oauth2.Config
 }
 
-func NewCalendarService(userRepo TokenGetter, publisher *broker.EventPublisher, oauthCfg *oauth2.Config) *CalendarService {
+func NewCalendarService(publisher *broker.EventPublisher, oauthCfg *oauth2.Config) *CalendarService {
 	return &CalendarService{
-		userRepo:  userRepo,
 		publisher: publisher,
 		oauthCfg:  oauthCfg,
 	}
 }
 
-func (s *CalendarService) buildService(ctx context.Context, userID string) (*calendar.Service, error) {
-	token, err := s.userRepo.GetUserCalendarToken(userID)
-	if err != nil {
-		return nil, fmt.Errorf("get user token: %w", err)
-	}
+func (s *CalendarService) buildService(ctx context.Context, token *oauth2.Token) (*calendar.Service, error) {
 	httpClient := s.oauthCfg.Client(ctx, token)
 	return calendar.NewService(ctx, option.WithHTTPClient(httpClient))
 }
 
-func (s *CalendarService) Create(ctx context.Context, userID string, input CreateEventInput) (string, error) {
-	svc, err := s.buildService(ctx, userID)
+func (s *CalendarService) Create(ctx context.Context, token *oauth2.Token, input CreateEventInput) (string, error) {
+	svc, err := s.buildService(ctx, token)
 	if err != nil {
 		return "", err
 	}
@@ -107,8 +97,8 @@ func (s *CalendarService) Create(ctx context.Context, userID string, input Creat
 	return created.Id, nil
 }
 
-func (s *CalendarService) Update(ctx context.Context, userID string, input UpdateEventInput) error {
-	svc, err := s.buildService(ctx, userID)
+func (s *CalendarService) Update(ctx context.Context, token *oauth2.Token, input UpdateEventInput) error {
+	svc, err := s.buildService(ctx, token)
 	if err != nil {
 		return err
 	}
@@ -172,8 +162,8 @@ func (s *CalendarService) Update(ctx context.Context, userID string, input Updat
 	return s.publisher.PublishUpdateEvent(payload)
 }
 
-func (s *CalendarService) Delete(ctx context.Context, userID string, eventID string) error {
-	svc, err := s.buildService(ctx, userID)
+func (s *CalendarService) Delete(ctx context.Context, token *oauth2.Token, eventID string) error {
+	svc, err := s.buildService(ctx, token)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -9,7 +10,6 @@ import (
 
 	"data_numbers/internal/broker"
 	"data_numbers/internal/handlers"
-	"data_numbers/internal/repository"
 	"data_numbers/internal/services"
 
 	"github.com/go-chi/chi/v5"
@@ -22,11 +22,47 @@ import (
 )
 
 type tokenPayload struct {
-	UserID       string    `json:"user_id"`
 	AccessToken  string    `json:"access_token"`
 	RefreshToken string    `json:"refresh_token"`
 	TokenType    string    `json:"token_type"`
 	Expiry       time.Time `json:"expiry"`
+}
+
+type createEventCommand struct {
+	Token       tokenPayload `json:"token"`
+	Summary     string       `json:"summary"`
+	Location    string       `json:"location,omitempty"`
+	Description string       `json:"description,omitempty"`
+	Start       string       `json:"start"`
+	End         string       `json:"end"`
+	Recurrence  []string     `json:"recurrence,omitempty"`
+	Attendees   []string     `json:"attendees,omitempty"`
+}
+
+type updateEventCommand struct {
+	Token       tokenPayload `json:"token"`
+	EventID     string       `json:"event_id"`
+	Summary     string       `json:"summary,omitempty"`
+	Location    string       `json:"location,omitempty"`
+	Description string       `json:"description,omitempty"`
+	Start       *string      `json:"start,omitempty"`
+	End         *string      `json:"end,omitempty"`
+	Recurrence  []string     `json:"recurrence,omitempty"`
+	Attendees   []string     `json:"attendees,omitempty"`
+}
+
+type deleteEventCommand struct {
+	Token   tokenPayload `json:"token"`
+	EventID string       `json:"event_id"`
+}
+
+func toOAuthToken(p tokenPayload) *oauth2.Token {
+	return &oauth2.Token{
+		AccessToken:  p.AccessToken,
+		RefreshToken: p.RefreshToken,
+		TokenType:    p.TokenType,
+		Expiry:       p.Expiry,
+	}
 }
 
 func main() {
@@ -51,49 +87,119 @@ func main() {
 		Endpoint:     google.Endpoint,
 	}
 
-	tokenStore := repository.NewTokenStore()
+	publisher := broker.NewEventPublisher(nc)
+	calendarSvc := services.NewCalendarService(publisher, oauthCfg)
 
-	tokenSubject := os.Getenv("NATS_TOKEN_SUBJECT")
-	if tokenSubject == "" {
-		log.Fatal("NATS_TOKEN_SUBJECT is required")
-	}
-	if _, err := nc.Subscribe(tokenSubject, func(msg *nats.Msg) {
-		var p tokenPayload
-		if err := json.Unmarshal(msg.Data, &p); err != nil {
-			log.Printf("token subscription: invalid payload: %v", err)
+	if _, err := nc.Subscribe("calendar.command.create_event", func(msg *nats.Msg) {
+		var cmd createEventCommand
+		if err := json.Unmarshal(msg.Data, &cmd); err != nil {
+			log.Printf("create_event: invalid payload: %v", err)
 			return
 		}
-		tokenStore.SetToken(p.UserID, &oauth2.Token{
-			AccessToken:  p.AccessToken,
-			RefreshToken: p.RefreshToken,
-			TokenType:    p.TokenType,
-			Expiry:       p.Expiry,
+
+		start, err := time.Parse(time.RFC3339, cmd.Start)
+		if err != nil {
+			log.Printf("create_event: invalid start: %v", err)
+			return
+		}
+		end, err := time.Parse(time.RFC3339, cmd.End)
+		if err != nil {
+			log.Printf("create_event: invalid end: %v", err)
+			return
+		}
+
+		eventID, err := calendarSvc.Create(context.Background(), toOAuthToken(cmd.Token), services.CreateEventInput{
+			Summary:     cmd.Summary,
+			Location:    cmd.Location,
+			Description: cmd.Description,
+			Start:       start,
+			End:         end,
+			Recurrence:  cmd.Recurrence,
+			Attendees:   cmd.Attendees,
 		})
-		log.Printf("token updated for user %s", p.UserID)
+		if err != nil {
+			log.Printf("create_event: %v", err)
+			return
+		}
+
+		log.Printf("create_event: created %s", eventID)
 	}); err != nil {
-		log.Fatalf("nats subscribe %s: %v", tokenSubject, err)
+		log.Fatalf("nats subscribe calendar.command.create_event: %v", err)
 	}
 
-	publisher := broker.NewEventPublisher(nc)
+	if _, err := nc.Subscribe("calendar.command.update_event", func(msg *nats.Msg) {
+		var cmd updateEventCommand
+		if err := json.Unmarshal(msg.Data, &cmd); err != nil {
+			log.Printf("update_event: invalid payload: %v", err)
+			return
+		}
+		if cmd.EventID == "" {
+			log.Printf("update_event: event_id required")
+			return
+		}
 
-	calendarSvc := services.NewCalendarService(tokenStore, publisher, oauthCfg)
-	authSvc := services.NewAuthService(oauthCfg)
+		input := services.UpdateEventInput{
+			EventID:     cmd.EventID,
+			Summary:     cmd.Summary,
+			Location:    cmd.Location,
+			Description: cmd.Description,
+			Recurrence:  cmd.Recurrence,
+			Attendees:   cmd.Attendees,
+		}
+		if cmd.Start != nil {
+			t, err := time.Parse(time.RFC3339, *cmd.Start)
+			if err != nil {
+				log.Printf("update_event: invalid start: %v", err)
+				return
+			}
+			input.Start = &t
+		}
+		if cmd.End != nil {
+			t, err := time.Parse(time.RFC3339, *cmd.End)
+			if err != nil {
+				log.Printf("update_event: invalid end: %v", err)
+				return
+			}
+			input.End = &t
+		}
+
+		if err := calendarSvc.Update(context.Background(), toOAuthToken(cmd.Token), input); err != nil {
+			log.Printf("update_event: %v", err)
+			return
+		}
+
+		log.Printf("update_event: updated %s", cmd.EventID)
+	}); err != nil {
+		log.Fatalf("nats subscribe calendar.command.update_event: %v", err)
+	}
+
+	if _, err := nc.Subscribe("calendar.command.delete_event", func(msg *nats.Msg) {
+		var cmd deleteEventCommand
+		if err := json.Unmarshal(msg.Data, &cmd); err != nil {
+			log.Printf("delete_event: invalid payload: %v", err)
+			return
+		}
+		if cmd.EventID == "" {
+			log.Printf("delete_event: event_id required")
+			return
+		}
+
+		if err := calendarSvc.Delete(context.Background(), toOAuthToken(cmd.Token), cmd.EventID); err != nil {
+			log.Printf("delete_event: %v", err)
+			return
+		}
+
+		log.Printf("delete_event: deleted %s", cmd.EventID)
+	}); err != nil {
+		log.Fatalf("nats subscribe calendar.command.delete_event: %v", err)
+	}
+
 	notifSvc := services.NewNotificationService(publisher)
-
-	eventHandler := handlers.NewEventHandler(calendarSvc)
-	authHandler := handlers.NewAuthHandler(authSvc)
 	calendarHandler := handlers.NewCalendarHandler(notifSvc)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-
-	r.Post("/events", eventHandler.Create)
-	r.Put("/events/{id}", eventHandler.Update)
-	r.Delete("/events/{id}", eventHandler.Delete)
-
-	r.Get("/auth/login", authHandler.Login)
-	r.Get("/auth/callback", authHandler.Callback)
 
 	r.Post("/webhook/google-calendar", calendarHandler.Webhook)
 

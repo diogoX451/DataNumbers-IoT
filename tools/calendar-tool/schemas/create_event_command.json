@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "calendar.command.create_event",
+  "title": "CreateEventCommand",
+  "description": "NATS subject: calendar.command.create_event. Triggers creation of a Google Calendar event. On success, calendar-tool publishes to calendar.event.create.",
+  "type": "object",
+  "required": ["token", "summary", "start", "end"],
+  "properties": {
+    "token": {
+      "type": "object",
+      "description": "Google OAuth2 token for the target calendar user.",
+      "required": ["access_token"],
+      "properties": {
+        "access_token": { "type": "string" },
+        "refresh_token": { "type": "string" },
+        "token_type": { "type": "string", "default": "Bearer" },
+        "expiry": {
+          "type": "string",
+          "format": "date-time",
+          "description": "RFC3339 expiry timestamp."
+        }
+      },
+      "additionalProperties": false
+    },
+    "summary": {
+      "type": "string",
+      "description": "Event title."
+    },
+    "location": {
+      "type": "string",
+      "description": "Geographic location or meeting link."
+    },
+    "description": {
+      "type": "string",
+      "description": "Event body/notes."
+    },
+    "start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Event start in RFC3339 format (e.g. 2026-06-10T14:00:00-03:00)."
+    },
+    "end": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Event end in RFC3339 format."
+    },
+    "recurrence": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "RRULE strings (e.g. [\"RRULE:FREQ=WEEKLY;COUNT=5\"]).",
+      "example": ["RRULE:FREQ=WEEKLY;COUNT=5"]
+    },
+    "attendees": {
+      "type": "array",
+      "items": { "type": "string", "format": "email" },
+      "description": "List of attendee email addresses."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "token": {
+        "access_token": "ya29.a0ARrdaM...",
+        "refresh_token": "1//0e...",
+        "token_type": "Bearer",
+        "expiry": "2026-06-09T15:00:00Z"
+      },
+      "summary": "Sprint Planning",
+      "location": "https://meet.google.com/abc-defg-hij",
+      "description": "Bi-weekly sprint planning meeting.",
+      "start": "2026-06-10T14:00:00-03:00",
+      "end": "2026-06-10T15:00:00-03:00",
+      "recurrence": ["RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=10"],
+      "attendees": ["dev@example.com", "pm@example.com"]
+    }
+  ]
+}

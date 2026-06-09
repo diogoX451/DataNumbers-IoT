@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "calendar.command.update_event",
+  "title": "UpdateEventCommand",
+  "description": "NATS subject: calendar.command.update_event. Triggers a patch update on an existing Google Calendar event. Only fields present are updated. On success, calendar-tool publishes to calendar.event.update.",
+  "type": "object",
+  "required": ["token", "event_id"],
+  "properties": {
+    "token": {
+      "type": "object",
+      "description": "Google OAuth2 token for the target calendar user.",
+      "required": ["access_token"],
+      "properties": {
+        "access_token": { "type": "string" },
+        "refresh_token": { "type": "string" },
+        "token_type": { "type": "string", "default": "Bearer" },
+        "expiry": {
+          "type": "string",
+          "format": "date-time",
+          "description": "RFC3339 expiry timestamp."
+        }
+      },
+      "additionalProperties": false
+    },
+    "event_id": {
+      "type": "string",
+      "description": "Google Calendar event ID to update."
+    },
+    "summary": {
+      "type": "string",
+      "description": "New event title. Omit to keep existing."
+    },
+    "location": {
+      "type": "string",
+      "description": "New location. Omit to keep existing."
+    },
+    "description": {
+      "type": "string",
+      "description": "New description. Omit to keep existing."
+    },
+    "start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "New start in RFC3339. Omit to keep existing."
+    },
+    "end": {
+      "type": "string",
+      "format": "date-time",
+      "description": "New end in RFC3339. Omit to keep existing."
+    },
+    "recurrence": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Replaces recurrence rules. Omit to keep existing."
+    },
+    "attendees": {
+      "type": "array",
+      "items": { "type": "string", "format": "email" },
+      "description": "Replaces full attendee list. Omit to keep existing."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "token": {
+        "access_token": "ya29.a0ARrdaM...",
+        "refresh_token": "1//0e...",
+        "token_type": "Bearer",
+        "expiry": "2026-06-09T15:00:00Z"
+      },
+      "event_id": "abc123xyz",
+      "summary": "Sprint Planning (updated)",
+      "start": "2026-06-10T15:00:00-03:00",
+      "end": "2026-06-10T16:00:00-03:00"
+    }
+  ]
+}
