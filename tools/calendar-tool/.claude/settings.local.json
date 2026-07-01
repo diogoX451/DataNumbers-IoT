@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\rafael\\\\Documents\\\\GitHub\\\\DataNumbers-IoT\\\\tools\\\\calendar-tool\" -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "Bash(go get *)",
+      "Bash(go build *)",
+      "Bash(GOWORK=off go build ./...)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\rafael\\\\Documents\\\\GitHub\\\\DataNumbers-IoT\\\\tools\\\\calendar-tool\\\\internal\\\\repository\\\\user_repository.go\" -Force)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\rafael\\\\Documents\\\\GitHub\\\\DataNumbers-IoT\\\\tools\\\\calendar-tool\\\\internal\\\\services\\\\event_service.go\" -Force)",
+      "Bash(Write-Host \"deleted\")",
+      "Bash(go vet *)",
+      "Bash(dir /s \"C:\\\\Users\\\\OPYT\\\\Documents\\\\GitHub\\\\projetos\\\\DataNumbers-IoT\\\\tools\\\\calendar-tool\")",
+      "Bash(Remove-Item \"C:\\\\Users\\\\OPYT\\\\Documents\\\\GitHub\\\\projetos\\\\DataNumbers-IoT\\\\tools\\\\calendar-tool\\\\internal\\\\handlers\\\\event_handler.go\" -Force)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\OPYT\\\\Documents\\\\GitHub\\\\projetos\\\\DataNumbers-IoT\\\\tools\\\\calendar-tool\\\\internal\\\\handlers\\\\auth_handler.go\" -Force)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\OPYT\\\\Documents\\\\GitHub\\\\projetos\\\\DataNumbers-IoT\\\\tools\\\\calendar-tool\\\\internal\\\\services\\\\auth_service.go\" -Force)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\OPYT\\\\Documents\\\\GitHub\\\\projetos\\\\DataNumbers-IoT\\\\tools\\\\calendar-tool\\\\internal\\\\repository\\\\token_store.go\" -Force)",
+      "Bash(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\OPYT\\\\Documents\\\\GitHub\\\\projetos\\\\DataNumbers-IoT\\\\tools\\\\calendar-tool\\\\schemas\" -Force)",
+      "Bash(Out-Null)",
+      "PowerShell(Remove-Item *)"
+    ]
+  }
+}

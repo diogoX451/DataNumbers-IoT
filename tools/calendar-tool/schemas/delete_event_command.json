@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "calendar.command.delete_event",
+  "title": "DeleteEventCommand",
+  "description": "NATS subject: calendar.command.delete_event. Deletes a Google Calendar event. On success, calendar-tool publishes to calendar.event.delete.",
+  "type": "object",
+  "required": ["token", "event_id"],
+  "properties": {
+    "token": {
+      "type": "object",
+      "description": "Google OAuth2 token for the target calendar user.",
+      "required": ["access_token"],
+      "properties": {
+        "access_token": { "type": "string" },
+        "refresh_token": { "type": "string" },
+        "token_type": { "type": "string", "default": "Bearer" },
+        "expiry": {
+          "type": "string",
+          "format": "date-time",
+          "description": "RFC3339 expiry timestamp."
+        }
+      },
+      "additionalProperties": false
+    },
+    "event_id": {
+      "type": "string",
+      "description": "Google Calendar event ID to delete."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "token": {
+        "access_token": "ya29.a0ARrdaM...",
+        "refresh_token": "1//0e...",
+        "token_type": "Bearer",
+        "expiry": "2026-06-09T15:00:00Z"
+      },
+      "event_id": "abc123xyz"
+    }
+  ]
+}
