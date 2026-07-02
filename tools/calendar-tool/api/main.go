@@ -215,19 +215,30 @@ func main() {
 
 	notifSvc := services.NewNotificationService(publisher)
 	calendarHandler := handlers.NewCalendarHandler(notifSvc)
-	eventHandler := handlers.NewEventHandler(db, publisher)
+	tokenStore := services.NewTokenStore(db)
+	pendingStates := services.NewPendingStates()
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:3000"
+	}
+	authHandler := handlers.NewAuthHandler(oauthCfg, tokenStore, pendingStates, frontendURL)
+	eventHandler := handlers.NewEventHandler(db, publisher, calendarSvc, tokenStore)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
 	r.Post("/webhook/google-calendar", calendarHandler.Webhook)
+	r.Get("/auth/google/callback", authHandler.Callback)
 
 	r.Group(func(r chi.Router) {
 		r.Use(authMiddleware(jwtPubKey))
 		r.Post("/events", eventHandler.Create)
 		r.Get("/events", eventHandler.List)
 		r.Delete("/events/{id}", eventHandler.Delete)
+		r.Post("/auth/login", authHandler.StartLogin)
+		r.Get("/auth/status", authHandler.Status)
+		r.Delete("/auth", authHandler.Disconnect)
 	})
 
 	port := os.Getenv("PORT")

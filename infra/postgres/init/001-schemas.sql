@@ -202,6 +202,20 @@ CREATE TABLE IF NOT EXISTS automation.calendar_events (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Token OAuth2 do Google Calendar por tenant. Preenchido pelo fluxo
+-- /api/calendar/auth/login → /api/calendar/auth/google/callback. Presença de
+-- linha == tenant conectado; calendar-tool usa isso pra decidir se sincroniza
+-- automation.calendar_events com o Google Calendar real do usuário.
+CREATE TABLE IF NOT EXISTS automation.calendar_oauth_tokens (
+    tenant_id UUID PRIMARY KEY REFERENCES auth.tenants(id) ON DELETE CASCADE,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT NOT NULL,
+    token_type VARCHAR(32) NOT NULL,
+    expiry TIMESTAMPTZ NOT NULL,
+    connected_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_calendar_events_tenant_id ON automation.calendar_events(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_calendar_events_starts_at ON automation.calendar_events(starts_at);
 

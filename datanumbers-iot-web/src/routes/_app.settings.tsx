@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { qk, queries } from "@/api/queries";
 import { authService } from "@/api/services/auth";
+import { googleCalendarAuthService } from "@/api/services/calendar";
 import { PageHeader } from "@/components/PageHeader";
 import { PageShell } from "@/components/PageShell";
 import { Button } from "@/components/ui/Button";
@@ -26,12 +27,30 @@ const TABS = [
   { id: "profile", label: "Perfil" },
   { id: "appearance", label: "Aparência" },
   { id: "api", label: "API & MQTT" },
+  { id: "integrations", label: "Integrações" },
   { id: "session", label: "Sessão" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
 function SettingsPage() {
   const [tab, setTab] = useState<TabId>("profile");
+  const { toast } = useToast();
+
+  // O calendar-tool redireciona de volta pra cá com ?google=connected|error
+  // depois do consent screen do Google (ver AuthHandler.Callback no backend).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const google = params.get("google");
+    if (!google) return;
+    setTab("integrations");
+    if (google === "connected") {
+      toast("Google Calendar conectado", { variant: "success" });
+    } else if (google === "error") {
+      toast("Falha ao conectar Google Calendar", { variant: "error" });
+    }
+    window.history.replaceState(null, "", window.location.pathname);
+  }, [toast]);
+
   return (
     <PageShell
       crumbs={[
@@ -48,6 +67,7 @@ function SettingsPage() {
       {tab === "profile" && <ProfileTab />}
       {tab === "appearance" && <AppearanceTab />}
       {tab === "api" && <ApiTab />}
+      {tab === "integrations" && <IntegrationsTab />}
       {tab === "session" && <SessionTab />}
     </PageShell>
   );
@@ -208,6 +228,87 @@ function ApiTab() {
             <li>GET /api/data/devices/:id/aggregations?field=…</li>
           </ul>
         </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+function IntegrationsTab() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const statusQ = useQuery({
+    queryKey: ["google-calendar-status"],
+    queryFn: () => googleCalendarAuthService.status(),
+  });
+
+  const connectM = useMutation({
+    mutationFn: () => googleCalendarAuthService.startLogin(),
+    onSuccess: ({ auth_url }) => {
+      window.location.href = auth_url;
+    },
+    onError: (e) =>
+      toast("Falha ao iniciar conexão", {
+        description: errorMessage(e),
+        variant: "error",
+      }),
+  });
+
+  const disconnectM = useMutation({
+    mutationFn: () => googleCalendarAuthService.disconnect(),
+    onSuccess: () => {
+      toast("Google Calendar desconectado", { variant: "success" });
+      queryClient.invalidateQueries({ queryKey: ["google-calendar-status"] });
+    },
+    onError: (e) =>
+      toast("Falha ao desconectar", {
+        description: errorMessage(e),
+        variant: "error",
+      }),
+  });
+
+  const connected = statusQ.data?.connected ?? false;
+
+  return (
+    <Card className="max-w-[620px]">
+      <CardHeader
+        title="Google Calendar"
+        subtitle="Replica os eventos marcados no Calendário desta plataforma pro seu Google Calendar real."
+      />
+      <CardBody>
+        {statusQ.isLoading ? (
+          <LoadingState />
+        ) : (
+          <EmptyState
+            icon="calendar"
+            title={connected ? "Conta conectada" : "Nenhuma conta conectada"}
+            description={
+              connected
+                ? "Todo evento novo criado na aba Calendário também é criado no seu Google Calendar."
+                : "Conecte sua conta Google pra sincronizar os eventos criados aqui com o Google Calendar de verdade."
+            }
+            action={
+              connected ? (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => disconnectM.mutate()}
+                  disabled={disconnectM.isPending}
+                >
+                  {disconnectM.isPending ? "Desconectando…" : "Desconectar"}
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => connectM.mutate()}
+                  disabled={connectM.isPending}
+                >
+                  {connectM.isPending ? "Redirecionando…" : "Conectar Google Calendar"}
+                </Button>
+              )
+            }
+          />
+        )}
       </CardBody>
     </Card>
   );

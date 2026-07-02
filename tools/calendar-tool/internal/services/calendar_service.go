@@ -50,6 +50,39 @@ func (s *CalendarService) buildService(ctx context.Context, token *oauth2.Token)
 	return calendar.NewService(ctx, option.WithHTTPClient(httpClient))
 }
 
+// CreateGoogleEvent insere o evento no Google Calendar sem publicar no NATS
+// (diferente de Create). Usado pelo fluxo interno (EventHandler), que já
+// publica calendar.event.create sozinho ao persistir em
+// automation.calendar_events — reusar Create aqui duplicaria a publicação e
+// disparava a automação duas vezes pro mesmo evento.
+func (s *CalendarService) CreateGoogleEvent(ctx context.Context, token *oauth2.Token, input CreateEventInput) (string, error) {
+	svc, err := s.buildService(ctx, token)
+	if err != nil {
+		return "", err
+	}
+
+	attendees := make([]*calendar.EventAttendee, len(input.Attendees))
+	for i, email := range input.Attendees {
+		attendees[i] = &calendar.EventAttendee{Email: email}
+	}
+
+	event := &calendar.Event{
+		Summary:     input.Summary,
+		Location:    input.Location,
+		Description: input.Description,
+		Start:       &calendar.EventDateTime{DateTime: input.Start.Format(time.RFC3339)},
+		End:         &calendar.EventDateTime{DateTime: input.End.Format(time.RFC3339)},
+		Recurrence:  input.Recurrence,
+		Attendees:   attendees,
+	}
+
+	created, err := svc.Events.Insert("primary", event).Do()
+	if err != nil {
+		return "", fmt.Errorf("google calendar insert: %w", err)
+	}
+	return created.Id, nil
+}
+
 func (s *CalendarService) Create(ctx context.Context, token *oauth2.Token, input CreateEventInput) (string, error) {
 	svc, err := s.buildService(ctx, token)
 	if err != nil {

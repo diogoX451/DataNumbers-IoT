@@ -4,25 +4,31 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
 	"data_numbers/internal/broker"
+	"data_numbers/internal/services"
 
 	"github.com/go-chi/chi/v5"
 )
 
-// EventHandler expõe o fluxo de calendário interno (sem Google): criar um
-// evento aqui persiste em automation.calendar_events e publica
-// calendar.event.create no NATS na hora — é isso que o rule-engine consome
-// pra disparar automation.rules amarradas ao evento.
+// EventHandler expõe o fluxo de calendário interno: criar um evento aqui
+// persiste em automation.calendar_events e publica calendar.event.create no
+// NATS na hora — é isso que o rule-engine consome pra disparar
+// automation.rules amarradas ao evento. Se o tenant tiver conectado o Google
+// Calendar (via AuthHandler), o mesmo evento é replicado lá também,
+// best-effort (falha na sincronização não derruba a criação do evento).
 type EventHandler struct {
-	db        *sql.DB
-	publisher *broker.EventPublisher
+	db          *sql.DB
+	publisher   *broker.EventPublisher
+	calendarSvc *services.CalendarService
+	tokens      *services.TokenStore
 }
 
-func NewEventHandler(db *sql.DB, publisher *broker.EventPublisher) *EventHandler {
-	return &EventHandler{db: db, publisher: publisher}
+func NewEventHandler(db *sql.DB, publisher *broker.EventPublisher, calendarSvc *services.CalendarService, tokens *services.TokenStore) *EventHandler {
+	return &EventHandler{db: db, publisher: publisher, calendarSvc: calendarSvc, tokens: tokens}
 }
 
 type createEventRequest struct {
@@ -106,6 +112,8 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.syncToGoogle(r.Context(), tenantID, req, start, end)
+
 	writeJSON(w, http.StatusCreated, calendarEvent{
 		EventID:     eventID,
 		Summary:     req.Summary,
@@ -114,6 +122,24 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		End:         end,
 		CreatedAt:   createdAt,
 	})
+}
+
+// syncToGoogle replica o evento no Google Calendar do tenant, se conectado.
+// Best-effort: só loga em caso de falha, nunca bloqueia a resposta —  o
+// evento interno (fonte de verdade da automação) já está persistido.
+func (h *EventHandler) syncToGoogle(ctx context.Context, tenantID string, req createEventRequest, start, end time.Time) {
+	tok, err := h.tokens.Get(ctx, tenantID)
+	if err != nil || tok == nil {
+		return
+	}
+	if _, err := h.calendarSvc.CreateGoogleEvent(ctx, tok, services.CreateEventInput{
+		Summary:     req.Summary,
+		Description: req.Description,
+		Start:       start,
+		End:         end,
+	}); err != nil {
+		log.Printf("google sync failed for tenant %s: %v", tenantID, err)
+	}
 }
 
 func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {

@@ -19,3 +19,23 @@ export const calendarService = {
     await api.delete(`/api/calendar/events/${id}`);
   },
 };
+
+export const googleCalendarAuthService = {
+  async status(): Promise<{ connected: boolean }> {
+    const { data } = await api.get<{ connected: boolean }>(
+      "/api/calendar/auth/status",
+    );
+    return data;
+  },
+
+  async startLogin(): Promise<{ auth_url: string }> {
+    const { data } = await api.post<{ auth_url: string }>(
+      "/api/calendar/auth/login",
+    );
+    return data;
+  },
+
+  async disconnect(): Promise<void> {
+    await api.delete("/api/calendar/auth");
+  },
+};

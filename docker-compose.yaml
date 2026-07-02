@@ -272,7 +272,8 @@ services:
       JWT_PUBLIC_KEY_PATH: /app/certs/public_key.pem
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-}
+      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-http://localhost:8080/api/calendar/auth/google/callback}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     networks:
       - data-numbers-network
 
