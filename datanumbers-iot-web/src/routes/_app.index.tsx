@@ -86,50 +86,32 @@ function HomePage() {
               : `Última verificação agora · ${online}/${total} online`
           }
           metrics={[
+            { label: "Dispositivos", value: total.toLocaleString("pt-BR") },
+            { label: "Spaces", value: spaces.length.toLocaleString("pt-BR") },
             {
               label: "Mensagens / min",
               value: msgsPerMin.toLocaleString("pt-BR"),
             },
-            { label: "Latência média", value: "34ms" },
-            { label: "Uptime 24h", value: "99.4%" },
           ]}
         />
       </div>
 
       <div className="grid grid-cols-4 gap-3.5 mb-4">
         <Stat
-          label="Temperatura média"
-          value="26.4"
-          unit="°C"
-          delta="+0.6"
-          deltaDir="up"
-          spark={demoSparks.temp}
-          color="oklch(0.7 0.18 50)"
+          label="Dispositivos"
+          value={devicesQ.isLoading ? "..." : total.toLocaleString("pt-BR")}
         />
         <Stat
-          label="Umidade média"
-          value="63"
-          unit="%"
-          delta="-2"
-          deltaDir="down"
-          spark={demoSparks.humidity}
-          color="oklch(0.65 0.13 230)"
+          label="Online"
+          value={devicesQ.isLoading ? "..." : online.toLocaleString("pt-BR")}
         />
         <Stat
-          label="Mensagens 24h"
-          value="3.2k"
-          delta="+12%"
-          deltaDir="up"
-          spark={demoSparks.messages}
-          color="var(--accent)"
+          label="Mensagens / min"
+          value={msgsPerMin.toLocaleString("pt-BR")}
         />
         <Stat
-          label="Regras disparadas"
-          value="6"
-          delta="+2"
-          deltaDir="up"
-          spark={demoSparks.rules}
-          color="oklch(0.72 0.15 165)"
+          label="Spaces"
+          value={spaces.length.toLocaleString("pt-BR")}
         />
       </div>
 
@@ -281,19 +263,6 @@ function HomePage() {
     </PageShell>
   );
 }
-
-/**
- * Sparklines da home — séries determinísticas com leve variação no carregamento
- * para o card não parecer estático. O backend ainda não expõe esses agregados
- * por tenant (`/api/data/...` é por device), então é placeholder visual até
- * termos endpoint próprio.
- */
-const demoSparks = {
-  temp: Array.from({ length: 24 }, (_, i) => 24 + Math.sin(i / 3) * 3 + Math.random() * 1.5),
-  humidity: Array.from({ length: 24 }, (_, i) => 60 + Math.cos(i / 4) * 8 + Math.random() * 2),
-  messages: Array.from({ length: 24 }, () => 80 + Math.random() * 40),
-  rules: Array.from({ length: 24 }, () => 1 + Math.random() * 4),
-};
 
 function AttentionRow({
   device,

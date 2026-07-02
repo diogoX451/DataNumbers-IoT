@@ -2,7 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { qk, queries } from "@/api/queries";
-import { calendarService } from "@/api/services/calendar";
+import {
+  calendarService,
+  googleCalendarAuthService,
+} from "@/api/services/calendar";
 import type { CreateCalendarEventPayload } from "@/api/types";
 import { PageHeader } from "@/components/PageHeader";
 import { PageShell } from "@/components/PageShell";
@@ -11,6 +14,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { Icon } from "@/components/Icon";
 import { Hint, Input, Label, Select, Textarea } from "@/components/ui/Input";
+import { Pill } from "@/components/ui/Pill";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/Table";
 import { LoadingState, ErrorState } from "@/components/ui/States";
 import { errorMessage, useToast } from "@/components/ui/Toast";
@@ -43,6 +47,10 @@ function CalendarPage() {
 
   const eventsQ = useQuery(queries.calendarEvents());
   const scenariosQ = useQuery(queries.scenarios());
+  const googleStatusQ = useQuery({
+    queryKey: ["google-calendar-status"],
+    queryFn: () => googleCalendarAuthService.status(),
+  });
 
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
@@ -53,8 +61,13 @@ function CalendarPage() {
   const createM = useMutation({
     mutationFn: (payload: CreateCalendarEventPayload) =>
       calendarService.create(payload),
-    onSuccess: () => {
-      toast("Evento marcado — automação disparada", { variant: "success" });
+    onSuccess: (event) => {
+      toast(
+        event.synced_to_google
+          ? "Evento marcado, sincronizado no Google e automação disparada"
+          : "Evento marcado localmente — automação disparada",
+        { variant: "success" },
+      );
       queryClient.invalidateQueries({ queryKey: qk.calendarEvents() });
       setSummary("");
       setDescription("");
@@ -69,6 +82,7 @@ function CalendarPage() {
   const removeM = useMutation({
     mutationFn: (id: string) => calendarService.remove(id),
     onSuccess: () => {
+      toast("Evento removido", { variant: "success" });
       queryClient.invalidateQueries({ queryKey: qk.calendarEvents() });
     },
     onError: (e) =>
@@ -89,6 +103,11 @@ function CalendarPage() {
     });
   }
 
+  const googleConfigured = googleStatusQ.data?.configured ?? true;
+  const googleConnected = googleStatusQ.data?.connected ?? false;
+  const invalidRange =
+    Boolean(start && end) && new Date(end).getTime() <= new Date(start).getTime();
+
   return (
     <PageShell crumbs={[{ label: "Início", to: "/" }, { label: "Calendário" }]}>
       <PageHeader
@@ -98,8 +117,28 @@ function CalendarPage() {
 
       <div className="grid grid-cols-[1fr_1.5fr] gap-[18px]">
         <Card>
-          <CardHeader title="Marcar evento" />
+          <CardHeader
+            title="Marcar evento"
+            action={
+              googleStatusQ.isLoading ? (
+                <Pill>Verificando Google</Pill>
+              ) : googleConnected ? (
+                <Pill tone="success">Google conectado</Pill>
+              ) : googleConfigured ? (
+                <Pill tone="warn">Google desconectado</Pill>
+              ) : (
+                <Pill tone="danger">Google sem credenciais</Pill>
+              )
+            }
+          />
           <CardBody className="flex flex-col gap-3">
+            <div className="text-[12px] text-fg-muted">
+              {googleConnected
+                ? "Novos eventos também serão criados no Google Calendar."
+                : googleConfigured
+                  ? "Novos eventos ficam internos até conectar o Google Calendar em Configurações."
+                  : "Configure GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no backend para habilitar o Google Calendar."}
+            </div>
             <div>
               <Label>Título</Label>
               <Input
@@ -155,7 +194,7 @@ function CalendarPage() {
             </div>
             <Button
               onClick={create}
-              disabled={createM.isPending || !summary.trim()}
+              disabled={createM.isPending || !summary.trim() || invalidRange}
             >
               <Icon name="plus" size={14} />{" "}
               {createM.isPending ? "Marcando…" : "Marcar evento"}
@@ -184,6 +223,7 @@ function CalendarPage() {
                   <TH>Evento</TH>
                   <TH>Início</TH>
                   <TH>Fim</TH>
+                  <TH>Google</TH>
                   <TH className="w-10" />
                 </tr>
               </THead>
@@ -200,11 +240,19 @@ function CalendarPage() {
                     </TD>
                     <TD>{new Date(ev.start).toLocaleString()}</TD>
                     <TD>{new Date(ev.end).toLocaleString()}</TD>
+                    <TD>
+                      {ev.synced_to_google ? (
+                        <Pill tone="success">Sincronizado</Pill>
+                      ) : (
+                        <Pill>Local</Pill>
+                      )}
+                    </TD>
                     <TD onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => removeM.mutate(ev.event_id)}
+                        disabled={removeM.isPending}
                       >
                         <Icon name="trash" size={13} />
                       </Button>

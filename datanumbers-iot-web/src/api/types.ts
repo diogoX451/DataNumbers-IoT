@@ -168,6 +168,8 @@ export type ScenarioDevice = {
 export type CalendarEvent = {
   event_id: string;
   scenario_id?: string;
+  google_event_id?: string;
+  synced_to_google: boolean;
   summary: string;
   description?: string;
   start: string;

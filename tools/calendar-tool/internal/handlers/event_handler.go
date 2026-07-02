@@ -12,14 +12,15 @@ import (
 	"data_numbers/internal/services"
 
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/oauth2"
 )
 
 // EventHandler expõe o fluxo de calendário interno: criar um evento aqui
 // persiste em automation.calendar_events e publica calendar.event.create no
 // NATS na hora — é isso que o rule-engine consome pra disparar
 // automation.rules amarradas ao evento. Se o tenant tiver conectado o Google
-// Calendar (via AuthHandler), o mesmo evento é replicado lá também,
-// best-effort (falha na sincronização não derruba a criação do evento).
+// Calendar (via AuthHandler), o mesmo evento é criado lá também e o ID externo
+// fica persistido pra permitir exclusão sincronizada.
 type EventHandler struct {
 	db          *sql.DB
 	publisher   *broker.EventPublisher
@@ -40,13 +41,15 @@ type createEventRequest struct {
 }
 
 type calendarEvent struct {
-	EventID     string    `json:"event_id"`
-	ScenarioID  *string   `json:"scenario_id,omitempty"`
-	Summary     string    `json:"summary"`
-	Description string    `json:"description,omitempty"`
-	Start       time.Time `json:"start"`
-	End         time.Time `json:"end"`
-	CreatedAt   time.Time `json:"created_at"`
+	EventID        string    `json:"event_id"`
+	ScenarioID     *string   `json:"scenario_id,omitempty"`
+	GoogleEventID  *string   `json:"google_event_id,omitempty"`
+	SyncedToGoogle bool      `json:"synced_to_google"`
+	Summary        string    `json:"summary"`
+	Description    string    `json:"description,omitempty"`
+	Start          time.Time `json:"start"`
+	End            time.Time `json:"end"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -76,6 +79,10 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid end (use RFC3339)")
 		return
 	}
+	if !end.After(start) {
+		writeError(w, http.StatusBadRequest, "end must be after start")
+		return
+	}
 
 	var scenarioID sql.NullString
 	if req.ScenarioID != "" {
@@ -83,14 +90,44 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		scenarioID.Valid = true
 	}
 
+	var googleEventID *string
+	tok, err := h.tokens.Get(r.Context(), tenantID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if tok != nil {
+		id, err := h.calendarSvc.CreateGoogleEvent(r.Context(), tok, services.CreateEventInput{
+			Summary:     req.Summary,
+			Description: req.Description,
+			Start:       start,
+			End:         end,
+		})
+		if err != nil {
+			writeError(w, http.StatusBadGateway, "google calendar sync failed: "+err.Error())
+			return
+		}
+		googleEventID = &id
+	}
+
 	var eventID string
 	var createdAt time.Time
+	var googleEventValue any
+	var googleSyncedAt any
+	if googleEventID != nil {
+		googleEventValue = *googleEventID
+		googleSyncedAt = time.Now().UTC()
+	}
 	err = h.db.QueryRowContext(r.Context(), `
-		INSERT INTO automation.calendar_events (tenant_id, scenario_id, summary, description, starts_at, ends_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO automation.calendar_events (
+			tenant_id, scenario_id, google_event_id, google_synced_at,
+			summary, description, starts_at, ends_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING event_id, created_at
-	`, tenantID, scenarioID, req.Summary, req.Description, start, end).Scan(&eventID, &createdAt)
+	`, tenantID, scenarioID, googleEventValue, googleSyncedAt, req.Summary, req.Description, start, end).Scan(&eventID, &createdAt)
 	if err != nil {
+		h.cleanupGoogleEvent(r.Context(), tok, googleEventID)
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -104,41 +141,38 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Start:       broker.EventTime{DateTime: start},
 		End:         broker.EventTime{DateTime: end},
 	}); err != nil {
-		// Evento já persistido — loga e segue. Falha aqui não deve impedir
-		// o operador de ver o evento criado; ele só não disparou automação.
-		writeJSON(w, http.StatusCreated, map[string]any{
-			"event_id": eventID, "warning": "created but failed to publish trigger: " + err.Error(),
-		})
+		h.cleanupStoredEvent(r.Context(), tenantID, eventID)
+		h.cleanupGoogleEvent(r.Context(), tok, googleEventID)
+		writeError(w, http.StatusBadGateway, "created but failed to publish automation trigger: "+err.Error())
 		return
 	}
 
-	h.syncToGoogle(r.Context(), tenantID, req, start, end)
-
 	writeJSON(w, http.StatusCreated, calendarEvent{
-		EventID:     eventID,
-		Summary:     req.Summary,
-		Description: req.Description,
-		Start:       start,
-		End:         end,
-		CreatedAt:   createdAt,
+		EventID:        eventID,
+		GoogleEventID:  googleEventID,
+		SyncedToGoogle: googleEventID != nil,
+		Summary:        req.Summary,
+		Description:    req.Description,
+		Start:          start,
+		End:            end,
+		CreatedAt:      createdAt,
 	})
 }
 
-// syncToGoogle replica o evento no Google Calendar do tenant, se conectado.
-// Best-effort: só loga em caso de falha, nunca bloqueia a resposta —  o
-// evento interno (fonte de verdade da automação) já está persistido.
-func (h *EventHandler) syncToGoogle(ctx context.Context, tenantID string, req createEventRequest, start, end time.Time) {
-	tok, err := h.tokens.Get(ctx, tenantID)
-	if err != nil || tok == nil {
+func (h *EventHandler) cleanupGoogleEvent(ctx context.Context, tok *oauth2.Token, googleEventID *string) {
+	if tok == nil || googleEventID == nil {
 		return
 	}
-	if _, err := h.calendarSvc.CreateGoogleEvent(ctx, tok, services.CreateEventInput{
-		Summary:     req.Summary,
-		Description: req.Description,
-		Start:       start,
-		End:         end,
-	}); err != nil {
-		log.Printf("google sync failed for tenant %s: %v", tenantID, err)
+	if err := h.calendarSvc.DeleteGoogleEvent(ctx, tok, *googleEventID); err != nil {
+		log.Printf("google cleanup failed for event %s: %v", *googleEventID, err)
+	}
+}
+
+func (h *EventHandler) cleanupStoredEvent(ctx context.Context, tenantID, eventID string) {
+	if _, err := h.db.ExecContext(ctx, `
+		DELETE FROM automation.calendar_events WHERE event_id = $1 AND tenant_id = $2
+	`, eventID, tenantID); err != nil {
+		log.Printf("calendar cleanup failed for event %s: %v", eventID, err)
 	}
 }
 
@@ -150,7 +184,7 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := h.db.QueryContext(r.Context(), `
-		SELECT event_id, scenario_id::text, summary, COALESCE(description, ''), starts_at, ends_at, created_at
+		SELECT event_id, scenario_id::text, google_event_id, summary, COALESCE(description, ''), starts_at, ends_at, created_at
 		FROM automation.calendar_events
 		WHERE tenant_id = $1
 		ORDER BY starts_at DESC
@@ -165,11 +199,16 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var e calendarEvent
 		var scenarioID sql.NullString
-		if err := rows.Scan(&e.EventID, &scenarioID, &e.Summary, &e.Description, &e.Start, &e.End, &e.CreatedAt); err != nil {
+		var googleEventID sql.NullString
+		if err := rows.Scan(&e.EventID, &scenarioID, &googleEventID, &e.Summary, &e.Description, &e.Start, &e.End, &e.CreatedAt); err != nil {
 			continue
 		}
 		if scenarioID.Valid {
 			e.ScenarioID = &scenarioID.String
+		}
+		if googleEventID.Valid {
+			e.GoogleEventID = &googleEventID.String
+			e.SyncedToGoogle = true
 		}
 		events = append(events, e)
 	}
@@ -187,6 +226,37 @@ func (h *EventHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	eventID := chi.URLParam(r, "id")
+
+	var googleEventID sql.NullString
+	err := h.db.QueryRowContext(r.Context(), `
+		SELECT google_event_id
+		FROM automation.calendar_events
+		WHERE event_id = $1 AND tenant_id = $2
+	`, eventID, tenantID).Scan(&googleEventID)
+	if err == sql.ErrNoRows {
+		writeError(w, http.StatusNotFound, "event not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if googleEventID.Valid && googleEventID.String != "" {
+		tok, err := h.tokens.Get(r.Context(), tenantID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if tok == nil {
+			writeError(w, http.StatusConflict, "google calendar is disconnected; reconnect before deleting a synced event")
+			return
+		}
+		if err := h.calendarSvc.DeleteGoogleEvent(r.Context(), tok, googleEventID.String); err != nil {
+			writeError(w, http.StatusBadGateway, "google calendar delete failed: "+err.Error())
+			return
+		}
+	}
 
 	res, err := h.db.ExecContext(r.Context(), `
 		DELETE FROM automation.calendar_events WHERE event_id = $1 AND tenant_id = $2

@@ -268,6 +268,7 @@ function IntegrationsTab() {
   });
 
   const connected = statusQ.data?.connected ?? false;
+  const configured = statusQ.data?.configured ?? true;
 
   return (
     <Card className="max-w-[620px]">
@@ -281,11 +282,19 @@ function IntegrationsTab() {
         ) : (
           <EmptyState
             icon="calendar"
-            title={connected ? "Conta conectada" : "Nenhuma conta conectada"}
+            title={
+              connected
+                ? "Conta conectada"
+                : configured
+                  ? "Nenhuma conta conectada"
+                  : "Credenciais ausentes"
+            }
             description={
               connected
                 ? "Todo evento novo criado na aba Calendário também é criado no seu Google Calendar."
-                : "Conecte sua conta Google pra sincronizar os eventos criados aqui com o Google Calendar de verdade."
+                : configured
+                  ? "Conecte sua conta Google pra sincronizar os eventos criados aqui com o Google Calendar de verdade."
+                  : "Configure GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET e GOOGLE_REDIRECT_URL no backend."
             }
             action={
               connected ? (
@@ -301,9 +310,11 @@ function IntegrationsTab() {
                 <Button
                   size="sm"
                   onClick={() => connectM.mutate()}
-                  disabled={connectM.isPending}
+                  disabled={connectM.isPending || !configured}
                 >
-                  {connectM.isPending ? "Redirecionando…" : "Conectar Google Calendar"}
+                  {connectM.isPending
+                    ? "Redirecionando…"
+                    : "Conectar Google Calendar"}
                 </Button>
               )
             }

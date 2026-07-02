@@ -46,8 +46,7 @@ src/
 ├── components/           # UI reutilizável (Button, Card, Pill, etc.)
 │   ├── ui/               # primitivos
 │   └── charts/           # Sparkline, LiveChart, SignalBars, BatteryBar
-├── api/queries.ts        # TanStack Query factories (mock → backend)
-├── data/                 # tipos + mock data
+├── api/queries.ts        # TanStack Query factories conectadas aos serviços
 ├── lib/
 │   ├── api.ts            # axios + interceptor /auth/refresh
 │   ├── auth.ts           # storage de tokens
@@ -67,15 +66,14 @@ essas variáveis. Para mudar a paleta inteira, só editar o CSS.
 O componente `useTheme()` (em `src/lib/theme.tsx`) persiste a escolha
 em `localStorage` e respeita `prefers-color-scheme` no primeiro load.
 
-## Mock vs backend real
+## Backend real
 
-Por enquanto, as queries em `src/api/queries.ts` resolvem com dados de
-`src/data/mock.ts`. Para conectar ao backend:
+As queries em `src/api/queries.ts` chamam os serviços reais por meio de
+`src/lib/api.ts`. O API gateway padrão é o nginx em `http://localhost:8080`.
 
-1. Substituir cada `queryFn` por chamada via `api` (definido em `src/lib/api.ts`).
-2. O interceptor de refresh já está pronto: 401 → tenta `/api/auth/refresh`
+1. O interceptor de refresh está ativo: 401 → tenta `/api/auth/refresh`
    com o `refresh_token` salvo, troca o par e refaz a request.
-3. As variáveis de ambiente são:
+2. As variáveis de ambiente são:
    - `VITE_API_URL` — base URL do nginx/API gateway (default `http://localhost:8080`)
    - `VITE_WS_URL` — endpoint WebSocket para telemetria ao vivo
 
@@ -94,7 +92,7 @@ Convenção:
 ## Docker
 
 A imagem é multi-stage: Node faz o build, nginx serve o `dist/`. O Compose
-expõe na porta `${WEB_PORT:-3000}` da máquina host.
+expõe na porta `${WEB_PORT:-3030}` da máquina host.
 
 ```bash
 docker compose up -d web

@@ -219,7 +219,7 @@ func main() {
 	pendingStates := services.NewPendingStates()
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
-		frontendURL = "http://localhost:3000"
+		frontendURL = "http://localhost:3030"
 	}
 	authHandler := handlers.NewAuthHandler(oauthCfg, tokenStore, pendingStates, frontendURL)
 	eventHandler := handlers.NewEventHandler(db, publisher, calendarSvc, tokenStore)

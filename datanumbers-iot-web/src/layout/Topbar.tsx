@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import { Icon } from "@/components/Icon";
-import { Kbd } from "@/components/ui/Kbd";
 import type { ReactNode } from "react";
 
 export type Crumb = {
@@ -13,14 +12,6 @@ export function Topbar({ crumbs }: { crumbs: Crumb[] }) {
     <header className="bg-bg-elev border-b border-border h-[var(--header-h)] sticky top-0 z-10 flex items-center px-6 gap-4">
       <Breadcrumbs crumbs={crumbs} />
       <div className="flex-1" />
-      <SearchBar />
-      <button
-        type="button"
-        aria-label="Notificações"
-        className="w-8 h-8 grid place-items-center rounded-sm text-fg-muted hover:bg-bg-hover hover:text-fg"
-      >
-        <Icon name="bell" size={16} />
-      </button>
     </header>
   );
 }
@@ -59,19 +50,5 @@ function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
         );
       })}
     </nav>
-  );
-}
-
-function SearchBar() {
-  return (
-    <div className="flex items-center gap-2 px-2.5 py-1.5 bg-bg-subtle border border-border rounded text-fg-subtle w-[280px] focus-within:border-accent focus-within:bg-bg-elev">
-      <Icon name="search" size={13} />
-      <input
-        type="text"
-        placeholder="Buscar dispositivos, regras, comandos…"
-        className="bg-transparent border-none outline-none flex-1 text-[13px] text-fg placeholder:text-fg-subtle"
-      />
-      <Kbd>⌘K</Kbd>
-    </div>
   );
 }

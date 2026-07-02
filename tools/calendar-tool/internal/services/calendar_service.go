@@ -2,13 +2,16 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"data_numbers/internal/broker"
 
 	"golang.org/x/oauth2"
 	"google.golang.org/api/calendar/v3"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )
 
@@ -48,6 +51,10 @@ func NewCalendarService(publisher *broker.EventPublisher, oauthCfg *oauth2.Confi
 func (s *CalendarService) buildService(ctx context.Context, token *oauth2.Token) (*calendar.Service, error) {
 	httpClient := s.oauthCfg.Client(ctx, token)
 	return calendar.NewService(ctx, option.WithHTTPClient(httpClient))
+}
+
+func (s *CalendarService) IsConfigured() bool {
+	return s.oauthCfg.ClientID != "" && s.oauthCfg.ClientSecret != "" && s.oauthCfg.RedirectURL != ""
 }
 
 // CreateGoogleEvent insere o evento no Google Calendar sem publicar no NATS
@@ -196,14 +203,26 @@ func (s *CalendarService) Update(ctx context.Context, token *oauth2.Token, input
 }
 
 func (s *CalendarService) Delete(ctx context.Context, token *oauth2.Token, eventID string) error {
+	if err := s.DeleteGoogleEvent(ctx, token, eventID); err != nil {
+		return err
+	}
+
+	return s.publisher.PublishDeleteEvent(broker.DeleteEventPayload{EventID: eventID})
+}
+
+func (s *CalendarService) DeleteGoogleEvent(ctx context.Context, token *oauth2.Token, eventID string) error {
 	svc, err := s.buildService(ctx, token)
 	if err != nil {
 		return err
 	}
 
 	if err := svc.Events.Delete("primary", eventID).Do(); err != nil {
+		var googleErr *googleapi.Error
+		if errors.As(err, &googleErr) && googleErr.Code == http.StatusNotFound {
+			return nil
+		}
 		return fmt.Errorf("google calendar delete: %w", err)
 	}
 
-	return s.publisher.PublishDeleteEvent(broker.DeleteEventPayload{EventID: eventID})
+	return nil
 }

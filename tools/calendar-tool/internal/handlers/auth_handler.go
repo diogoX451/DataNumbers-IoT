@@ -24,10 +24,18 @@ func NewAuthHandler(oauthCfg *oauth2.Config, tokens *services.TokenStore, states
 	return &AuthHandler{oauthCfg: oauthCfg, tokens: tokens, states: states, frontendURL: frontendURL}
 }
 
+func (h *AuthHandler) configured() bool {
+	return h.oauthCfg.ClientID != "" && h.oauthCfg.ClientSecret != "" && h.oauthCfg.RedirectURL != ""
+}
+
 func (h *AuthHandler) StartLogin(w http.ResponseWriter, r *http.Request) {
 	tenantID, ok := tenantIDFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "missing tenant")
+		return
+	}
+	if !h.configured() {
+		writeError(w, http.StatusServiceUnavailable, "google calendar credentials are not configured")
 		return
 	}
 
@@ -44,6 +52,11 @@ func (h *AuthHandler) StartLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
+	if !h.configured() {
+		http.Redirect(w, r, h.frontendURL+"/settings?google=error", http.StatusFound)
+		return
+	}
+
 	q := r.URL.Query()
 	state := q.Get("state")
 	code := q.Get("code")
@@ -80,7 +93,10 @@ func (h *AuthHandler) Status(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]bool{"connected": tok != nil})
+	writeJSON(w, http.StatusOK, map[string]bool{
+		"connected":  tok != nil,
+		"configured": h.configured(),
+	})
 }
 
 func (h *AuthHandler) Disconnect(w http.ResponseWriter, r *http.Request) {

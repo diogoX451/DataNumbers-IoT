@@ -130,7 +130,7 @@ services:
       PASSWORD_REDIS: ${REDIS_PASSWORD:-}
       JWT_PRIVATE_KEY_PATH: /auth/certs/private_key.pem
       JWT_PUBLIC_KEY_PATH: /auth/certs/public_key.pem
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3030,http://localhost:8080}
     healthcheck:
       # /auth/verify-token sem header devolve 401 — usamos isso como sinal de
       # que o processo está vivo e respondendo HTTP.
@@ -167,7 +167,7 @@ services:
       PORT_EMQX: 1883
       ROUTER_PORT: 3002
       NATS_URL: nats://nats:4222
-      WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080}
+      WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS:-http://localhost:3030,http://localhost:8080}
       JWT_PUBLIC_KEY_PATH: /app/certs/public_key.pem
     networks:
       - data-numbers-network
@@ -273,7 +273,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-http://localhost:8080/api/calendar/auth/google/callback}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3030}
     networks:
       - data-numbers-network
 
@@ -302,7 +302,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "${WEB_PORT:-3000}:80"
+      - "${WEB_PORT:-3030}:80"
     networks:
       - data-numbers-network
 

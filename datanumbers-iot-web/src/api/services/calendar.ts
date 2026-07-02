@@ -1,6 +1,11 @@
 import { api } from "@/lib/api";
 import type { CalendarEvent, CreateCalendarEventPayload } from "../types";
 
+export type GoogleCalendarAuthStatus = {
+  connected: boolean;
+  configured: boolean;
+};
+
 export const calendarService = {
   async list(): Promise<CalendarEvent[]> {
     const { data } = await api.get<CalendarEvent[]>("/api/calendar/events");
@@ -21,8 +26,8 @@ export const calendarService = {
 };
 
 export const googleCalendarAuthService = {
-  async status(): Promise<{ connected: boolean }> {
-    const { data } = await api.get<{ connected: boolean }>(
+  async status(): Promise<GoogleCalendarAuthStatus> {
+    const { data } = await api.get<GoogleCalendarAuthStatus>(
       "/api/calendar/auth/status",
     );
     return data;

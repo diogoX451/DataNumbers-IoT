@@ -24,6 +24,7 @@ Schemas criados no banco único:
 - `gateway`
 - `device_manager`
 - `data_management`
+- `automation`
 
 Serviços configurados no `docker-compose.yaml`:
 
@@ -36,6 +37,9 @@ Serviços configurados no `docker-compose.yaml`:
 - `device-manager`: serviço Go de templates e dispositivos.
 - `gateway-emqx`: serviço Go que conecta EMQX ao NATS.
 - `data-management`: serviço Go que consome telemetria NATS e persiste no TimescaleDB.
+- `rule-engine`: serviço Go que avalia regras de automação.
+- `calendar-tool`: serviço Go que cria eventos internos e sincroniza Google Calendar via OAuth2.
+- `web`: front-end da plataforma.
 
 Contratos NATS versionáveis ficam em `contracts/nats/`.
 
@@ -66,6 +70,9 @@ auth/              # autenticação e ACL inicial
 gateway-emqx/      # gateway EMQX -> NATS
 device-manager/    # templates, fields e devices
 data-management/   # consumidor de telemetria e persistência
+rule-engine/       # automações por telemetria e calendário
+tools/calendar-tool/ # calendário interno + OAuth2 Google Calendar
+datanumbers-iot-web/ # front-end React
 ```
 
 Portas padrão:
@@ -74,7 +81,11 @@ Portas padrão:
 - `device-manager`: `3001`
 - `gateway-emqx` HTTP: `3002`
 - `data-management`: `3003`
+- `rule-engine`: `3004`
+- `calendar-tool`: `3005`
 - `gateway-emqx` gRPC exhook: `5051`
+- `api-gateway` nginx: `8080`
+- `web`: `3030`
 - `nats` client: `4222`
 - `nats` monitor: `8222`
 - `nats-ui`: `3131`

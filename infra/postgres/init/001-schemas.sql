@@ -188,19 +188,24 @@ BEGIN
 END
 $$;
 
--- Evento de calendário interno (não sincronizado com Google): dispara
--- automation.rules por trigger_condition, do mesmo jeito que telemetria de
--- sensor dispara. Ver rule-engine/cmd/api/main.go (subscribe calendar.event.create).
+-- Evento de calendário interno: dispara automation.rules por trigger_condition,
+-- do mesmo jeito que telemetria de sensor dispara. Quando o tenant conecta o
+-- Google Calendar, google_event_id mantém o vínculo com o evento externo.
 CREATE TABLE IF NOT EXISTS automation.calendar_events (
     event_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     tenant_id UUID NOT NULL REFERENCES auth.tenants(id) ON DELETE CASCADE,
     scenario_id UUID REFERENCES automation.scenarios(scenario_id) ON DELETE SET NULL,
+    google_event_id TEXT,
+    google_synced_at TIMESTAMPTZ,
     summary VARCHAR(255) NOT NULL,
     description TEXT,
     starts_at TIMESTAMPTZ NOT NULL,
     ends_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE automation.calendar_events ADD COLUMN IF NOT EXISTS google_event_id TEXT;
+ALTER TABLE automation.calendar_events ADD COLUMN IF NOT EXISTS google_synced_at TIMESTAMPTZ;
 
 -- Token OAuth2 do Google Calendar por tenant. Preenchido pelo fluxo
 -- /api/calendar/auth/login → /api/calendar/auth/google/callback. Presença de
@@ -218,6 +223,7 @@ CREATE TABLE IF NOT EXISTS automation.calendar_oauth_tokens (
 
 CREATE INDEX IF NOT EXISTS idx_calendar_events_tenant_id ON automation.calendar_events(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_calendar_events_starts_at ON automation.calendar_events(starts_at);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_google_event_id ON automation.calendar_events(google_event_id);
 
 CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON auth.users(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_acls_tenant_id ON gateway.acls(tenant_id);

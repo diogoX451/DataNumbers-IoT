@@ -82,12 +82,7 @@ function SignInPage() {
                 />
               </div>
               <div>
-                <Label className="flex justify-between">
-                  <span>Senha</span>
-                  <span className="text-accent text-[11px] cursor-pointer font-normal">
-                    Esqueceu?
-                  </span>
-                </Label>
+                <Label>Senha</Label>
                 <Input
                   type="password"
                   value={password}
