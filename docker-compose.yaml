@@ -248,6 +248,34 @@ services:
     networks:
       - data-numbers-network
 
+  calendar-tool:
+    container_name: datanumbers-calendar-tool
+    build:
+      context: ./tools/calendar-tool
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      auth-api:
+        condition: service_healthy
+    ports:
+      - "${CALENDAR_TOOL_PORT:-3005}:8080"
+    volumes:
+      - certs-data:/app/certs:ro
+    environment:
+      DATABASE_URL: "postgres://${POSTGRES_USER:-numbers}:${POSTGRES_PASSWORD:-numbers}@postgres:5432/${POSTGRES_DB:-data_numbers_iot}?sslmode=disable"
+      NATS_URL: nats://nats:4222
+      PORT: 8080
+      JWT_PUBLIC_KEY_PATH: /app/certs/public_key.pem
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-}
+    networks:
+      - data-numbers-network
+
   nginx:
     image: nginx:alpine
     container_name: datanumbers-api-gateway
@@ -262,6 +290,7 @@ services:
       - gateway-emqx
       - data-management
       - rule-engine
+      - calendar-tool
     networks:
       - data-numbers-network
 

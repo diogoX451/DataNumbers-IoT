@@ -66,7 +66,8 @@ type IconName =
   | "fan"
   | "clock"
   | "refresh"
-  | "logout";
+  | "logout"
+  | "calendar";
 
 const PATHS: Record<IconName, ReactNode> = {
   home: (<><path d="M3 12L12 4l9 8" /><path d="M5 10v10h14V10" /></>),
@@ -128,6 +129,7 @@ const PATHS: Record<IconName, ReactNode> = {
   clock: (<><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>),
   refresh: <path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" />,
   logout: <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />,
+  calendar: (<><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4M16 3v4M3 10h18" /></>),
 };
 
 type IconProps = Omit<SVGProps<SVGSVGElement>, "name"> & {

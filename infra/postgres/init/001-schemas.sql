@@ -188,6 +188,23 @@ BEGIN
 END
 $$;
 
+-- Evento de calendário interno (não sincronizado com Google): dispara
+-- automation.rules por trigger_condition, do mesmo jeito que telemetria de
+-- sensor dispara. Ver rule-engine/cmd/api/main.go (subscribe calendar.event.create).
+CREATE TABLE IF NOT EXISTS automation.calendar_events (
+    event_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES auth.tenants(id) ON DELETE CASCADE,
+    scenario_id UUID REFERENCES automation.scenarios(scenario_id) ON DELETE SET NULL,
+    summary VARCHAR(255) NOT NULL,
+    description TEXT,
+    starts_at TIMESTAMPTZ NOT NULL,
+    ends_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_calendar_events_tenant_id ON automation.calendar_events(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_starts_at ON automation.calendar_events(starts_at);
+
 CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON auth.users(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_acls_tenant_id ON gateway.acls(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_devices_data_tenant_id ON data_management.devices_data(tenant_id);

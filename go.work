@@ -6,4 +6,5 @@ use (
 	./device-manager
 	./gateway-emqx
 	./rule-engine
+	./tools/calendar-tool
 )

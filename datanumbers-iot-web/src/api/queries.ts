@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { authService } from "./services/auth";
+import { calendarService } from "./services/calendar";
 import { actuatorsService, devicesService } from "./services/devices";
 import { gatewayService } from "./services/gateway";
 import { rulesService, scenariosService } from "./services/rules";
@@ -31,6 +32,7 @@ export const qk = {
     p?: { bucket?: string; from?: string; to?: string },
   ) => ["aggregation", id, field, p] as const,
   historys: () => ["historys"] as const,
+  calendarEvents: () => ["calendarEvents"] as const,
 };
 
 export const queries = {
@@ -125,5 +127,11 @@ export const queries = {
     queryOptions({
       queryKey: qk.historys(),
       queryFn: () => gatewayService.listHistorys(),
+    }),
+
+  calendarEvents: () =>
+    queryOptions({
+      queryKey: qk.calendarEvents(),
+      queryFn: () => calendarService.list(),
     }),
 };

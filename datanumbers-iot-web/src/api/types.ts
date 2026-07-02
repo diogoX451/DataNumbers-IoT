@@ -163,6 +163,26 @@ export type ScenarioDevice = {
   topic: string;
 };
 
+// --- Calendar ---
+
+export type CalendarEvent = {
+  event_id: string;
+  scenario_id?: string;
+  summary: string;
+  description?: string;
+  start: string;
+  end: string;
+  created_at: string;
+};
+
+export type CreateCalendarEventPayload = {
+  summary: string;
+  description?: string;
+  scenario_id?: string;
+  start: string;
+  end: string;
+};
+
 // --- Telemetry ---
 
 export type TelemetryRow = {

@@ -9,7 +9,12 @@ import (
 )
 
 type CreateEventPayload struct {
-	EventID     string     `json:"event_id"`
+	EventID string `json:"event_id"`
+	// TenantID identifica o tenant dono do evento — usado pelo rule-engine
+	// pra escopar quais automation.rules avaliar. Vazio no fluxo Google
+	// Calendar legado (sem tenant); sempre preenchido no fluxo interno.
+	TenantID    string     `json:"tenant_id,omitempty"`
+	ScenarioID  string     `json:"scenario_id,omitempty"`
 	Summary     string     `json:"summary"`
 	Location    string     `json:"location,omitempty"`
 	Description string     `json:"description,omitempty"`

@@ -20,6 +20,7 @@ type NavSection =
         | "/activity"
         | "/templates"
         | "/rules"
+        | "/calendar"
         | "/settings";
       label: string;
       icon: IconName;
@@ -52,6 +53,13 @@ const NAV: NavSection[] = [
     label: "Automações",
     icon: "workflow",
     activeIf: (p) => p.startsWith("/rules"),
+  },
+  {
+    kind: "item",
+    to: "/calendar",
+    label: "Calendário",
+    icon: "calendar",
+    activeIf: (p) => p.startsWith("/calendar"),
   },
   { kind: "section", label: "Conta" },
   { kind: "item", to: "/settings", label: "Configurações", icon: "settings" },

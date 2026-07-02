@@ -101,6 +101,7 @@ func main() {
 
 	// Iniciar Worker de Regras
 	go a.runRuleWorker()
+	go a.runCalendarWorker()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", a.health)
@@ -191,6 +192,38 @@ func (a *app) runRuleWorker() {
 		if errCore != nil {
 			log.Printf("core nats fallback subscribe: %v", errCore)
 		}
+	}
+}
+
+// runCalendarWorker escuta calendar.event.create (publicado pelo
+// tools/calendar-tool ao marcar um evento) e reaproveita evaluateRules — o
+// mesmo caminho usado pra telemetria de sensor. O evento inteiro vira o
+// "payload" avaliado pelo trigger_condition; como evaluateRules avalia a
+// expressão direto contra esse mapa (sem prefixo "payload."), a condição é
+// escrita como ex: summary == 'Regar plantas' (não payload.summary == ...).
+func (a *app) runCalendarWorker() {
+	_, err := a.nats.QueueSubscribe("calendar.event.create", "rule-engine-group", func(msg *nats.Msg) {
+		var event map[string]any
+		if err := json.Unmarshal(msg.Data, &event); err != nil {
+			log.Printf("calendar worker: invalid payload: %v", err)
+			return
+		}
+
+		tenantID, _ := event["tenant_id"].(string)
+		if tenantID == "" {
+			log.Printf("calendar worker: event without tenant_id, skipping")
+			return
+		}
+
+		a.evaluateRules(tenantID, map[string]any{
+			"tenant_id": tenantID,
+			"source":    "calendar",
+			"payload":   event,
+		})
+		log.Printf("calendar event %v evaluated for tenant %s", event["event_id"], tenantID)
+	})
+	if err != nil {
+		log.Printf("calendar worker subscribe: %v", err)
 	}
 }
 

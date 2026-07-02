@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"data_numbers/internal/broker"
@@ -14,6 +16,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/golang-jwt/jwt/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 	"github.com/nats-io/nats.go"
 	"golang.org/x/oauth2"
@@ -78,6 +82,21 @@ func main() {
 		log.Fatalf("nats connect: %v", err)
 	}
 	defer nc.Close()
+
+	db, err := sql.Open("pgx", os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatalf("open database: %v", err)
+	}
+	defer db.Close()
+
+	pubKeyPath := os.Getenv("JWT_PUBLIC_KEY_PATH")
+	if pubKeyPath == "" {
+		pubKeyPath = "public_key.pem"
+	}
+	jwtPubKey, err := os.ReadFile(pubKeyPath)
+	if err != nil {
+		log.Printf("warning: could not read JWT public key from %s: %v", pubKeyPath, err)
+	}
 
 	oauthCfg := &oauth2.Config{
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
@@ -196,12 +215,20 @@ func main() {
 
 	notifSvc := services.NewNotificationService(publisher)
 	calendarHandler := handlers.NewCalendarHandler(notifSvc)
+	eventHandler := handlers.NewEventHandler(db, publisher)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
 	r.Post("/webhook/google-calendar", calendarHandler.Webhook)
+
+	r.Group(func(r chi.Router) {
+		r.Use(authMiddleware(jwtPubKey))
+		r.Post("/events", eventHandler.Create)
+		r.Get("/events", eventHandler.List)
+		r.Delete("/events/{id}", eventHandler.Delete)
+	})
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -211,5 +238,49 @@ func main() {
 	log.Printf("server listening on :%s", port)
 	if err := http.ListenAndServe(":"+port, r); err != nil {
 		log.Fatalf("server: %v", err)
+	}
+}
+
+// authMiddleware valida o Bearer JWT emitido pelo auth-api e injeta o
+// tenant_id no context (mesmo padrão usado em rule-engine/device-manager),
+// pra que EventHandler saiba de qual tenant é o evento criado.
+func authMiddleware(pubKeyPEM []byte) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+				return
+			}
+
+			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+			key, err := jwt.ParseRSAPublicKeyFromPEM(pubKeyPEM)
+			if err != nil {
+				http.Error(w, `{"error":"server misconfigured"}`, http.StatusInternalServerError)
+				return
+			}
+			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+				return key, nil
+			})
+			if err != nil || !token.Valid {
+				http.Error(w, `{"error":"invalid token"}`, http.StatusUnauthorized)
+				return
+			}
+
+			claims, ok := token.Claims.(jwt.MapClaims)
+			if !ok {
+				http.Error(w, `{"error":"invalid token"}`, http.StatusUnauthorized)
+				return
+			}
+			data, ok := claims["data"].(map[string]any)
+			if !ok {
+				http.Error(w, `{"error":"invalid token"}`, http.StatusUnauthorized)
+				return
+			}
+			tenantID, _ := data["tenant_id"].(string)
+
+			ctx := context.WithValue(r.Context(), handlers.TenantIDKey, tenantID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
 }
